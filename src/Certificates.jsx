@@ -25,9 +25,11 @@ export default function Certificates({
     <div className="page-transition" style={{ fontFamily: "sans-serif" }}>
       <style>{cssAnimations}</style>
       <Header />
+
+      {/* Lebar maksimal diperbesar menjadi 1200px agar layout 2 kolom lebih lega */}
       <div
         style={{
-          maxWidth: "900px",
+          maxWidth: "1200px",
           margin: "0 auto",
           padding: "2rem 2rem 4rem 2rem",
           minHeight: "80vh",
@@ -46,11 +48,21 @@ export default function Certificates({
           </h1>
         </ScrollReveal>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "4rem" }}>
+        {/* MENGGUNAKAN CSS GRID UNTUK 2 KOLOM (Kiri & Kanan) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+            gap: "2rem",
+          }}
+        >
           {certificates.map((cert) => (
-            <ScrollReveal key={cert.id}>
+            <ScrollReveal key={cert.id} style={{ height: "100%" }}>
               <div
                 style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  height: "100%",
                   border: "1px solid #eaeaea",
                   borderRadius: "12px",
                   padding: "2rem",
@@ -60,7 +72,7 @@ export default function Certificates({
               >
                 <h2
                   style={{
-                    fontSize: "1.8rem",
+                    fontSize: "1.6rem",
                     color: "#333",
                     marginBottom: "0.5rem",
                     textAlign: "center",
@@ -70,9 +82,9 @@ export default function Certificates({
                 </h2>
                 <p
                   style={{
-                    fontSize: "1.1rem",
+                    fontSize: "1rem",
                     color: "#888",
-                    marginBottom: "2rem",
+                    marginBottom: "1.5rem",
                     textAlign: "center",
                     fontWeight: "500",
                     textTransform: "uppercase",
@@ -82,18 +94,21 @@ export default function Certificates({
                   Penyelenggara: {cert.organizer}
                 </p>
 
+                {/* Area Konten Sertifikat (PDF/Gambar) */}
                 <div
                   style={{
                     width: "100%",
+                    flexGrow: 1,
                     display: "flex",
                     justifyContent: "center",
+                    alignItems: "center",
                   }}
                 >
                   {isPdf(cert.file_url) ? (
                     <div
                       style={{
                         width: "100%",
-                        height: "70vh",
+                        height: "400px",
                         border: "1px solid #ccc",
                         borderRadius: "8px",
                         overflow: "hidden",
@@ -114,7 +129,7 @@ export default function Certificates({
                       alt={cert.title}
                       style={{
                         maxWidth: "100%",
-                        maxHeight: "70vh",
+                        maxHeight: "400px",
                         objectFit: "contain",
                         borderRadius: "8px",
                       }}
@@ -124,12 +139,13 @@ export default function Certificates({
               </div>
             </ScrollReveal>
           ))}
-          {certificates.length === 0 && (
-            <p style={{ textAlign: "center", color: "#888" }}>
-              Belum ada sertifikat.
-            </p>
-          )}
         </div>
+
+        {certificates.length === 0 && (
+          <p style={{ textAlign: "center", color: "#888" }}>
+            Belum ada sertifikat.
+          </p>
+        )}
       </div>
       <Footer />
     </div>
