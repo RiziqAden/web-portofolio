@@ -1,66 +1,73 @@
 import React, { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
 
-// Fungsi untuk konversi link Google Drive ke format preview
+// KONFIGURASI SUPABASE (Ganti dengan URL dan KEY Anda sendiri!)
+const supabaseUrl = "ISI_DENGAN_URL_SUPABASE";
+const supabaseKey = "ISI_DENGAN_ANON_KEY_SUPABASE";
+const supabase = createClient(supabaseUrl, supabaseKey);
+
 const getEmbeddablePdfLink = (url) => {
   if (!url) return "";
   if (url.includes("drive.google.com/file/d/")) {
     const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-    if (match && match[1]) {
+    if (match && match[1])
       return `https://drive.google.com/file/d/${match[1]}/preview`;
-    }
   }
   return url;
 };
 
-// Pilihan Warna Pastel untuk Background Project
 const colorOptions = [
-  { name: "Biru Pastel (Seperti Gambar)", value: "#e8f4f8" },
+  { name: "Biru Pastel", value: "#e8f4f8" },
   { name: "Ungu Pastel", value: "#f3eef5" },
   { name: "Abu-abu Terang", value: "#eff2f5" },
   { name: "Krem (Charitize)", value: "#faebe1" },
-  { name: "Hijau Pastel (Houzz)", value: "#eaf4e5" },
-  { name: "Kuning Pastel (Light Finder)", value: "#fff8e1" },
+  { name: "Hijau Pastel", value: "#eaf4e5" },
+  { name: "Kuning Pastel", value: "#fff8e1" },
 ];
-
-// Data Dummy Awal Projects
-const initialProjects = [
-  {
-    id: 1,
-    title: "CIRCLE",
-    desc: "Smart Parental Controls",
-    imgUrl:
-      "https://images.unsplash.com/photo-1543269664-56d59c15923b?q=80&w=600&auto=format&fit=crop",
-    pdfUrl: "",
-    linkUrl: "https://circle.com",
-    bgColor: "#e8f4f8",
-  },
-];
-
-// Data Dummy Awal About Me
-const initialAboutData = {
-  name: "M Riziq Sirfatullah Alfarizi",
-  photoUrl:
-    "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=500&auto=format&fit=crop",
-  description:
-    "Halo! Saya adalah seorang UI/UX Designer yang berfokus pada kesederhanaan dan fungsi. Saya percaya bahwa desain yang baik adalah desain yang tidak hanya terlihat indah, tetapi juga memecahkan masalah pengguna dengan cara yang paling efisien.",
-  skills: "Figma\nUI/UX Design\nPrototyping & Wireframing\nUser Research",
-  contact: "Email: mrsa.ziq@contoh.com\nLinkedIn: linkedin.com/in/riziq",
-};
 
 export default function App() {
-  const [projects, setProjects] = useState(initialProjects);
-  const [aboutData, setAboutData] = useState(initialAboutData);
+  const [projects, setProjects] = useState([]);
+  const [aboutData, setAboutData] = useState({
+    name: "",
+    photo_url: "",
+    description: "",
+    skills: "",
+    contact: "",
+  });
   const [currentHash, setCurrentHash] = useState(window.location.hash);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeProject, setActiveProject] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // FUNGSI MENGAMBIL DATA DARI SUPABASE
+  const fetchData = async () => {
+    setLoading(true);
+    // Ambil Projects
+    const { data: projData } = await supabase
+      .from("projects")
+      .select("*")
+      .order("id", { ascending: true });
+    if (projData) setProjects(projData);
+
+    // Ambil About Me
+    const { data: aboutRes } = await supabase
+      .from("about_me")
+      .select("*")
+      .eq("id", 1)
+      .single();
+    if (aboutRes) setAboutData(aboutRes);
+
+    setLoading(false);
+  };
 
   useEffect(() => {
+    fetchData(); // Panggil data saat web pertama dibuka
+
     const handleHashChange = () => setCurrentHash(window.location.hash);
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  // --- KOMPONEN NAVIGASI UTAMA ---
   const Header = () => (
     <header
       style={{
@@ -95,12 +102,24 @@ export default function App() {
     </header>
   );
 
+  if (loading)
+    return (
+      <div
+        style={{
+          padding: "4rem",
+          textAlign: "center",
+          fontFamily: "sans-serif",
+        }}
+      >
+        Memuat data dari Server...
+      </div>
+    );
+
   // --- HALAMAN HOME ---
   if (currentHash === "" || currentHash === "#/") {
     return (
       <div style={{ fontFamily: "sans-serif", margin: 0, padding: 0 }}>
         <Header />
-
         <div
           style={{
             textAlign: "center",
@@ -132,7 +151,7 @@ export default function App() {
                 }}
               >
                 <img
-                  src={proj.imgUrl}
+                  src={proj.img_url}
                   alt={proj.title}
                   style={{
                     maxWidth: "80%",
@@ -146,7 +165,7 @@ export default function App() {
               <div
                 style={{
                   width: "50%",
-                  backgroundColor: proj.bgColor,
+                  backgroundColor: proj.bg_color,
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
@@ -171,7 +190,7 @@ export default function App() {
                     marginBottom: "2rem",
                   }}
                 >
-                  {proj.desc}
+                  {proj.description}
                 </p>
                 <button
                   onClick={() => {
@@ -192,6 +211,11 @@ export default function App() {
               </div>
             </div>
           ))}
+          {projects.length === 0 && (
+            <p style={{ textAlign: "center", padding: "2rem" }}>
+              Belum ada project yang ditambahkan.
+            </p>
+          )}
         </div>
       </div>
     );
@@ -202,7 +226,6 @@ export default function App() {
     return (
       <div style={{ fontFamily: "sans-serif", margin: 0, padding: 0 }}>
         <Header />
-
         <div
           style={{
             maxWidth: "900px",
@@ -210,7 +233,6 @@ export default function App() {
             padding: "2rem 2rem 6rem 2rem",
           }}
         >
-          {/* Top: Nama dan Foto */}
           <div
             style={{
               display: "flex",
@@ -242,7 +264,7 @@ export default function App() {
               }}
             >
               <img
-                src={aboutData.photoUrl}
+                src={aboutData.photo_url}
                 alt="Profile"
                 style={{
                   width: "100%",
@@ -255,8 +277,6 @@ export default function App() {
               />
             </div>
           </div>
-
-          {/* Deskripsi */}
           <div style={{ marginBottom: "4rem" }}>
             <p
               style={{
@@ -269,8 +289,6 @@ export default function App() {
               {aboutData.description}
             </p>
           </div>
-
-          {/* Skills */}
           <div style={{ marginBottom: "4rem" }}>
             <h2
               style={{
@@ -279,7 +297,6 @@ export default function App() {
                 marginBottom: "1.5rem",
                 borderBottom: "1px solid #ddd",
                 paddingBottom: "0.5rem",
-                letterSpacing: "1px",
               }}
             >
               SKILLS & COMPETENCIES
@@ -295,8 +312,6 @@ export default function App() {
               {aboutData.skills}
             </p>
           </div>
-
-          {/* Contact */}
           <div>
             <h2
               style={{
@@ -305,7 +320,6 @@ export default function App() {
                 marginBottom: "1.5rem",
                 borderBottom: "1px solid #ddd",
                 paddingBottom: "0.5rem",
-                letterSpacing: "1px",
               }}
             >
               CONTACT
@@ -346,7 +360,6 @@ export default function App() {
         >
           &larr; Kembali ke Home
         </button>
-
         <div
           style={{
             display: "flex",
@@ -356,9 +369,9 @@ export default function App() {
           }}
         >
           <h1 style={{ color: "#333" }}>{activeProject.title}</h1>
-          {activeProject.linkUrl && activeProject.linkUrl !== "#" && (
+          {activeProject.link_url && activeProject.link_url !== "#" && (
             <a
-              href={activeProject.linkUrl}
+              href={activeProject.link_url}
               target="_blank"
               rel="noreferrer"
               style={{
@@ -373,8 +386,7 @@ export default function App() {
             </a>
           )}
         </div>
-
-        {activeProject.pdfUrl ? (
+        {activeProject.pdf_url ? (
           <div
             style={{
               width: "100%",
@@ -385,16 +397,13 @@ export default function App() {
             }}
           >
             <iframe
-              src={getEmbeddablePdfLink(activeProject.pdfUrl)}
+              src={getEmbeddablePdfLink(activeProject.pdf_url)}
               width="100%"
               height="100%"
               allow="autoplay"
               style={{ border: "none" }}
               title={`PDF ${activeProject.title}`}
-            >
-              Browser Anda tidak mendukung iframe. Silakan unduh PDF secara
-              manual.
-            </iframe>
+            ></iframe>
           </div>
         ) : (
           <div
@@ -406,27 +415,24 @@ export default function App() {
               color: "#888",
             }}
           >
-            Belum ada file PDF untuk project ini.
+            Belum ada file PDF.
           </div>
         )}
       </div>
     );
   }
 
-  // --- HALAMAN LOGIN ADMIN ---
+  // --- LOGIN ADMIN ---
   if (currentHash === "#/admin" && !isLoggedIn) {
     const handleLogin = (e) => {
       e.preventDefault();
       if (
         e.target.username.value === "mrsa.ziq" &&
         e.target.password.value === "portofolio/aden17!"
-      ) {
+      )
         setIsLoggedIn(true);
-      } else {
-        alert("Username atau password salah!");
-      }
+      else alert("Username atau password salah!");
     };
-
     return (
       <div
         style={{
@@ -492,14 +498,13 @@ export default function App() {
     );
   }
 
-  // --- HALAMAN DASHBOARD ADMIN (CRUD) ---
+  // --- DASHBOARD ADMIN ---
   if (currentHash === "#/admin" && isLoggedIn) {
     return (
       <AdminDashboard
         projects={projects}
-        setProjects={setProjects}
+        fetchData={fetchData}
         aboutData={aboutData}
-        setAboutData={setAboutData}
       />
     );
   }
@@ -513,43 +518,57 @@ export default function App() {
   );
 }
 
-// --- KOMPONEN ADMIN DASHBOARD ---
-const AdminDashboard = ({ projects, setProjects, aboutData, setAboutData }) => {
+// KOMPONEN ADMIN DATABASE
+const AdminDashboard = ({ projects, fetchData, aboutData }) => {
   const emptyForm = {
     id: null,
     title: "",
-    desc: "",
-    imgUrl: "",
-    pdfUrl: "",
-    linkUrl: "",
-    bgColor: colorOptions[0].value,
+    description: "",
+    img_url: "",
+    pdf_url: "",
+    link_url: "",
+    bg_color: colorOptions[0].value,
   };
   const [form, setForm] = useState(emptyForm);
   const [isEditingProject, setIsEditingProject] = useState(false);
-
-  // State untuk form About Me
   const [aboutForm, setAboutForm] = useState(aboutData);
-  const [activeTab, setActiveTab] = useState("projects"); // 'projects' atau 'about'
+  const [activeTab, setActiveTab] = useState("projects");
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Handler Project
-  const handleProjectSubmit = (e) => {
+  // Simpan / Edit Project ke DB
+  const handleProjectSubmit = async (e) => {
     e.preventDefault();
+    setIsSaving(true);
     if (isEditingProject) {
-      setProjects(projects.map((p) => (p.id === form.id ? form : p)));
+      await supabase.from("projects").update(form).eq("id", form.id);
       alert("Project berhasil diperbarui!");
     } else {
-      setProjects([...projects, { ...form, id: Date.now() }]);
+      const { id, ...newProject } = form; // Hapus ID agar digenerate otomatis oleh DB
+      await supabase.from("projects").insert([newProject]);
       alert("Project baru berhasil ditambahkan!");
     }
     setForm(emptyForm);
     setIsEditingProject(false);
+    setIsSaving(false);
+    fetchData(); // Refresh data dari server
   };
 
-  // Handler About Me
-  const handleAboutSubmit = (e) => {
+  // Hapus Project dari DB
+  const handleDelete = async (id) => {
+    if (window.confirm("Yakin ingin menghapus project ini?")) {
+      await supabase.from("projects").delete().eq("id", id);
+      fetchData(); // Refresh data dari server
+    }
+  };
+
+  // Update About Me ke DB
+  const handleAboutSubmit = async (e) => {
     e.preventDefault();
-    setAboutData(aboutForm);
+    setIsSaving(true);
+    await supabase.from("about_me").update(aboutForm).eq("id", 1);
     alert("Halaman About Me berhasil diperbarui!");
+    setIsSaving(false);
+    fetchData(); // Refresh data
   };
 
   return (
@@ -569,7 +588,7 @@ const AdminDashboard = ({ projects, setProjects, aboutData, setAboutData }) => {
           marginBottom: "1rem",
         }}
       >
-        <h2>Dashboard Admin Panel</h2>
+        <h2>Dashboard Admin (Terkoneksi Database)</h2>
         <a
           href="#/"
           style={{
@@ -583,7 +602,6 @@ const AdminDashboard = ({ projects, setProjects, aboutData, setAboutData }) => {
         </a>
       </div>
 
-      {/* Tab Navigasi Admin */}
       <div
         style={{
           display: "flex",
@@ -600,7 +618,6 @@ const AdminDashboard = ({ projects, setProjects, aboutData, setAboutData }) => {
             cursor: "pointer",
             background: activeTab === "projects" ? "#333" : "transparent",
             color: activeTab === "projects" ? "#fff" : "#333",
-            border: "1px solid #333",
           }}
         >
           Kelola Projects
@@ -612,7 +629,6 @@ const AdminDashboard = ({ projects, setProjects, aboutData, setAboutData }) => {
             cursor: "pointer",
             background: activeTab === "about" ? "#333" : "transparent",
             color: activeTab === "about" ? "#fff" : "#333",
-            border: "1px solid #333",
           }}
         >
           Kelola About Me
@@ -630,9 +646,7 @@ const AdminDashboard = ({ projects, setProjects, aboutData, setAboutData }) => {
               border: "1px solid #eee",
             }}
           >
-            <h3 style={{ marginTop: 0 }}>
-              {isEditingProject ? "Edit Project" : "Tambah Project Baru"}
-            </h3>
+            <h3>{isEditingProject ? "Edit Project" : "Tambah Project Baru"}</h3>
             <form
               onSubmit={handleProjectSubmit}
               style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
@@ -643,37 +657,39 @@ const AdminDashboard = ({ projects, setProjects, aboutData, setAboutData }) => {
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 required
-                style={{ padding: "0.8rem", border: "1px solid #ccc" }}
+                style={{ padding: "0.8rem" }}
               />
               <input
                 type="text"
                 placeholder="Deskripsi Singkat"
-                value={form.desc}
-                onChange={(e) => setForm({ ...form, desc: e.target.value })}
+                value={form.description}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
                 required
-                style={{ padding: "0.8rem", border: "1px solid #ccc" }}
+                style={{ padding: "0.8rem" }}
               />
               <input
                 type="url"
-                placeholder="URL Gambar Cover Kiri (JPG/PNG)"
-                value={form.imgUrl}
-                onChange={(e) => setForm({ ...form, imgUrl: e.target.value })}
+                placeholder="URL Gambar Cover (JPG/PNG)"
+                value={form.img_url}
+                onChange={(e) => setForm({ ...form, img_url: e.target.value })}
                 required
-                style={{ padding: "0.8rem", border: "1px solid #ccc" }}
+                style={{ padding: "0.8rem" }}
               />
               <input
                 type="url"
                 placeholder="Link Google Drive PDF"
-                value={form.pdfUrl}
-                onChange={(e) => setForm({ ...form, pdfUrl: e.target.value })}
-                style={{ padding: "0.8rem", border: "1px solid #ccc" }}
+                value={form.pdf_url || ""}
+                onChange={(e) => setForm({ ...form, pdf_url: e.target.value })}
+                style={{ padding: "0.8rem" }}
               />
               <input
                 type="url"
-                placeholder="Link Eksternal Project (Opsional)"
-                value={form.linkUrl}
-                onChange={(e) => setForm({ ...form, linkUrl: e.target.value })}
-                style={{ padding: "0.8rem", border: "1px solid #ccc" }}
+                placeholder="Link Eksternal Project"
+                value={form.link_url || ""}
+                onChange={(e) => setForm({ ...form, link_url: e.target.value })}
+                style={{ padding: "0.8rem" }}
               />
 
               <div>
@@ -684,7 +700,7 @@ const AdminDashboard = ({ projects, setProjects, aboutData, setAboutData }) => {
                     fontWeight: "bold",
                   }}
                 >
-                  Pilih Warna Background Kanan:
+                  Warna Background:
                 </label>
                 <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
                   {colorOptions.map((color) => (
@@ -699,21 +715,18 @@ const AdminDashboard = ({ projects, setProjects, aboutData, setAboutData }) => {
                     >
                       <input
                         type="radio"
-                        name="bgColor"
                         value={color.value}
-                        checked={form.bgColor === color.value}
+                        checked={form.bg_color === color.value}
                         onChange={(e) =>
-                          setForm({ ...form, bgColor: e.target.value })
+                          setForm({ ...form, bg_color: e.target.value })
                         }
                       />
                       <span
                         style={{
-                          display: "inline-block",
                           width: "20px",
                           height: "20px",
                           backgroundColor: color.value,
                           border: "1px solid #ccc",
-                          borderRadius: "4px",
                         }}
                       ></span>
                       {color.name}
@@ -725,15 +738,20 @@ const AdminDashboard = ({ projects, setProjects, aboutData, setAboutData }) => {
               <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
                 <button
                   type="submit"
+                  disabled={isSaving}
                   style={{
                     padding: "1rem 2rem",
-                    backgroundColor: "#333",
+                    backgroundColor: isSaving ? "#888" : "#333",
                     color: "#fff",
                     border: "none",
                     cursor: "pointer",
                   }}
                 >
-                  {isEditingProject ? "Simpan Perubahan" : "Upload Project"}
+                  {isSaving
+                    ? "Menyimpan..."
+                    : isEditingProject
+                      ? "Simpan Perubahan"
+                      : "Upload Project"}
                 </button>
                 {isEditingProject && (
                   <button
@@ -742,86 +760,41 @@ const AdminDashboard = ({ projects, setProjects, aboutData, setAboutData }) => {
                       setForm(emptyForm);
                       setIsEditingProject(false);
                     }}
-                    style={{
-                      padding: "1rem 2rem",
-                      backgroundColor: "#fff",
-                      color: "#333",
-                      border: "1px solid #333",
-                      cursor: "pointer",
-                    }}
+                    style={{ padding: "1rem 2rem", cursor: "pointer" }}
                   >
-                    Batal Edit
+                    Batal
                   </button>
                 )}
               </div>
             </form>
           </div>
 
-          <h3>Daftar Project</h3>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              marginTop: "1rem",
-            }}
-          >
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ backgroundColor: "#f4f4f4", textAlign: "left" }}>
-                <th style={{ padding: "1rem", borderBottom: "2px solid #ddd" }}>
-                  Judul
-                </th>
-                <th style={{ padding: "1rem", borderBottom: "2px solid #ddd" }}>
-                  Warna Tema
-                </th>
-                <th style={{ padding: "1rem", borderBottom: "2px solid #ddd" }}>
-                  Aksi
-                </th>
+              <tr style={{ background: "#eee", textAlign: "left" }}>
+                <th>Judul</th>
+                <th>Aksi</th>
               </tr>
             </thead>
             <tbody>
               {projects.map((proj) => (
-                <tr key={proj.id} style={{ borderBottom: "1px solid #eee" }}>
+                <tr key={proj.id} style={{ borderBottom: "1px solid #ddd" }}>
                   <td style={{ padding: "1rem" }}>{proj.title}</td>
-                  <td style={{ padding: "1rem" }}>
-                    <span
-                      style={{
-                        display: "inline-block",
-                        width: "15px",
-                        height: "15px",
-                        backgroundColor: proj.bgColor,
-                        border: "1px solid #ccc",
-                        marginRight: "8px",
-                        borderRadius: "2px",
-                      }}
-                    ></span>
-                    {proj.bgColor}
-                  </td>
                   <td style={{ padding: "1rem" }}>
                     <button
                       onClick={() => {
                         setForm(proj);
                         setIsEditingProject(true);
-                        window.scrollTo({ top: 0, behavior: "smooth" });
+                        window.scrollTo(0, 0);
                       }}
-                      style={{
-                        marginRight: "1rem",
-                        padding: "0.5rem 1rem",
-                        cursor: "pointer",
-                        backgroundColor: "#fff",
-                        color: "#333",
-                        border: "1px solid #ccc",
-                      }}
+                      style={{ marginRight: "1rem", padding: "0.5rem" }}
                     >
                       Edit
                     </button>
                     <button
-                      onClick={() => {
-                        if (window.confirm("Hapus project ini?"))
-                          setProjects(projects.filter((p) => p.id !== proj.id));
-                      }}
+                      onClick={() => handleDelete(proj.id)}
                       style={{
-                        padding: "0.5rem 1rem",
-                        cursor: "pointer",
+                        padding: "0.5rem",
                         backgroundColor: "#ff4d4d",
                         color: "white",
                         border: "none",
@@ -838,147 +811,101 @@ const AdminDashboard = ({ projects, setProjects, aboutData, setAboutData }) => {
       )}
 
       {activeTab === "about" && (
-        <div
+        <form
+          onSubmit={handleAboutSubmit}
           style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "1.5rem",
             background: "#f9f9f9",
             padding: "2rem",
-            borderRadius: "8px",
-            border: "1px solid #eee",
           }}
         >
-          <h3 style={{ marginTop: 0 }}>Edit Halaman About Me</h3>
-          <form
-            onSubmit={handleAboutSubmit}
-            style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
+          <label>
+            Nama
+            <input
+              value={aboutForm.name}
+              onChange={(e) =>
+                setAboutForm({ ...aboutForm, name: e.target.value })
+              }
+              required
+              style={{ padding: "0.8rem", width: "100%", marginTop: "0.5rem" }}
+            />
+          </label>
+          <label>
+            URL Foto
+            <input
+              value={aboutForm.photo_url}
+              onChange={(e) =>
+                setAboutForm({ ...aboutForm, photo_url: e.target.value })
+              }
+              required
+              style={{ padding: "0.8rem", width: "100%", marginTop: "0.5rem" }}
+            />
+          </label>
+          <label>
+            Deskripsi
+            <textarea
+              value={aboutForm.description}
+              onChange={(e) =>
+                setAboutForm({ ...aboutForm, description: e.target.value })
+              }
+              required
+              style={{
+                padding: "0.8rem",
+                width: "100%",
+                marginTop: "0.5rem",
+                height: "100px",
+              }}
+            />
+          </label>
+          <label>
+            Skills
+            <textarea
+              value={aboutForm.skills}
+              onChange={(e) =>
+                setAboutForm({ ...aboutForm, skills: e.target.value })
+              }
+              required
+              style={{
+                padding: "0.8rem",
+                width: "100%",
+                marginTop: "0.5rem",
+                height: "100px",
+              }}
+            />
+          </label>
+          <label>
+            Contact
+            <textarea
+              value={aboutForm.contact}
+              onChange={(e) =>
+                setAboutForm({ ...aboutForm, contact: e.target.value })
+              }
+              required
+              style={{
+                padding: "0.8rem",
+                width: "100%",
+                marginTop: "0.5rem",
+                height: "100px",
+              }}
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={isSaving}
+            style={{
+              padding: "1rem",
+              backgroundColor: isSaving ? "#888" : "#333",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer",
+              width: "200px",
+            }}
           >
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
-              }}
-            >
-              <label style={{ fontWeight: "bold" }}>Nama</label>
-              <input
-                type="text"
-                value={aboutForm.name}
-                onChange={(e) =>
-                  setAboutForm({ ...aboutForm, name: e.target.value })
-                }
-                required
-                style={{ padding: "0.8rem", border: "1px solid #ccc" }}
-              />
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
-              }}
-            >
-              <label style={{ fontWeight: "bold" }}>
-                URL Foto Profil (Sisi Kanan)
-              </label>
-              <input
-                type="url"
-                value={aboutForm.photoUrl}
-                onChange={(e) =>
-                  setAboutForm({ ...aboutForm, photoUrl: e.target.value })
-                }
-                required
-                style={{ padding: "0.8rem", border: "1px solid #ccc" }}
-              />
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
-              }}
-            >
-              <label style={{ fontWeight: "bold" }}>Deskripsi Singkat</label>
-              <textarea
-                value={aboutForm.description}
-                onChange={(e) =>
-                  setAboutForm({ ...aboutForm, description: e.target.value })
-                }
-                required
-                style={{
-                  padding: "0.8rem",
-                  border: "1px solid #ccc",
-                  minHeight: "120px",
-                  fontFamily: "inherit",
-                }}
-              />
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
-              }}
-            >
-              <label style={{ fontWeight: "bold" }}>
-                Skills & Competencies (Gunakan Enter untuk baris baru)
-              </label>
-              <textarea
-                value={aboutForm.skills}
-                onChange={(e) =>
-                  setAboutForm({ ...aboutForm, skills: e.target.value })
-                }
-                required
-                style={{
-                  padding: "0.8rem",
-                  border: "1px solid #ccc",
-                  minHeight: "100px",
-                  fontFamily: "inherit",
-                }}
-              />
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
-              }}
-            >
-              <label style={{ fontWeight: "bold" }}>
-                Contact Info (Gunakan Enter untuk baris baru)
-              </label>
-              <textarea
-                value={aboutForm.contact}
-                onChange={(e) =>
-                  setAboutForm({ ...aboutForm, contact: e.target.value })
-                }
-                required
-                style={{
-                  padding: "0.8rem",
-                  border: "1px solid #ccc",
-                  minHeight: "100px",
-                  fontFamily: "inherit",
-                }}
-              />
-            </div>
-
-            <button
-              type="submit"
-              style={{
-                padding: "1rem 2rem",
-                backgroundColor: "#333",
-                color: "#fff",
-                border: "none",
-                cursor: "pointer",
-                width: "fit-content",
-              }}
-            >
-              Simpan Halaman About
-            </button>
-          </form>
-        </div>
+            {isSaving ? "Menyimpan..." : "Simpan Halaman About"}
+          </button>
+        </form>
       )}
     </div>
   );
