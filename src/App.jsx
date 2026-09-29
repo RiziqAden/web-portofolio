@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 
-// KONFIGURASI SUPABASE (Memanggil dari file .env)
+// KONFIGURASI SUPABASE (.env)
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Fungsi Konversi Link Google Drive (PDF & Gambar)
 const getEmbeddablePdfLink = (url) => {
   if (!url) return "";
   if (url.includes("drive.google.com/file/d/")) {
@@ -16,6 +17,18 @@ const getEmbeddablePdfLink = (url) => {
   return url;
 };
 
+const getDriveImageUrl = (url) => {
+  if (!url) return "";
+  if (url.includes("drive.google.com/file/d/")) {
+    const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    // Mengubah link drive biasa menjadi link direct image
+    if (match && match[1])
+      return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+  }
+  return url;
+};
+
+// Pilihan Warna Background Kanan (Sudah ditambah warna baru)
 const colorOptions = [
   { name: "Biru Pastel", value: "#e8f4f8" },
   { name: "Ungu Pastel", value: "#f3eef5" },
@@ -23,6 +36,9 @@ const colorOptions = [
   { name: "Krem (Charitize)", value: "#faebe1" },
   { name: "Hijau Pastel", value: "#eaf4e5" },
   { name: "Kuning Pastel", value: "#fff8e1" },
+  { name: "Biru Cerah", value: "#e3f2fd" },
+  { name: "Biru Telur Asin", value: "#e0f2f1" },
+  { name: "Merah Soft", value: "#ffebee" },
 ];
 
 export default function App() {
@@ -39,17 +55,14 @@ export default function App() {
   const [activeProject, setActiveProject] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // FUNGSI MENGAMBIL DATA DARI SUPABASE
   const fetchData = async () => {
     setLoading(true);
-    // Ambil Projects
     const { data: projData } = await supabase
       .from("projects")
       .select("*")
       .order("id", { ascending: true });
     if (projData) setProjects(projData);
 
-    // Ambil About Me
     const { data: aboutRes } = await supabase
       .from("about_me")
       .select("*")
@@ -61,13 +74,16 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchData(); // Panggil data saat web pertama dibuka
-
-    const handleHashChange = () => setCurrentHash(window.location.hash);
+    fetchData();
+    const handleHashChange = () => {
+      setCurrentHash(window.location.hash);
+      window.scrollTo(0, 0); // Reset scroll saat pindah halaman
+    };
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
+  // --- KOMPONEN UI GLOBAL ---
   const Header = () => (
     <header
       style={{
@@ -102,6 +118,51 @@ export default function App() {
     </header>
   );
 
+  const Footer = () => (
+    <footer
+      style={{
+        textAlign: "center",
+        padding: "3rem 2rem",
+        borderTop: "1px solid #eee",
+        marginTop: "4rem",
+        fontFamily: "sans-serif",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: "2rem",
+          marginBottom: "1rem",
+          flexWrap: "wrap",
+        }}
+      >
+        <a
+          href="https://www.instagram.com/mrsa.ziq/"
+          target="_blank"
+          rel="noreferrer"
+          className="footer-link"
+        >
+          Instagram
+        </a>
+        <a
+          href="https://www.linkedin.com/in/m-riziq-sa"
+          target="_blank"
+          rel="noreferrer"
+          className="footer-link"
+        >
+          LinkedIn
+        </a>
+        <a href="mailto:riziq.sirfatullah@gmail.com" className="footer-link">
+          Email
+        </a>
+      </div>
+      <p style={{ fontSize: "0.9rem", color: "#888" }}>
+        © 2026 M Riziq Sirfatullah Alfarizi. All rights reserved.
+      </p>
+    </footer>
+  );
+
   if (loading)
     return (
       <div
@@ -118,7 +179,11 @@ export default function App() {
   // --- HALAMAN HOME ---
   if (currentHash === "" || currentHash === "#/") {
     return (
-      <div style={{ fontFamily: "sans-serif", margin: 0, padding: 0 }}>
+      <div
+        className="page-transition"
+        style={{ fontFamily: "sans-serif", margin: 0, padding: 0 }}
+      >
+        <style>{cssAnimations}</style>
         <Header />
         <div
           style={{
@@ -147,11 +212,12 @@ export default function App() {
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
-                  padding: "2rem",
+                  padding: "3rem",
                 }}
               >
                 <img
-                  src={proj.img_url}
+                  className="img-hover"
+                  src={getDriveImageUrl(proj.img_url)}
                   alt={proj.title}
                   style={{
                     maxWidth: "80%",
@@ -193,6 +259,7 @@ export default function App() {
                   {proj.description}
                 </p>
                 <button
+                  className="btn-hover"
                   onClick={() => {
                     setActiveProject(proj);
                     window.location.hash = `#/project/${proj.id}`;
@@ -200,6 +267,7 @@ export default function App() {
                   style={{
                     padding: "0.8rem 2rem",
                     backgroundColor: "transparent",
+                    color: "#333",
                     border: "1px solid #333",
                     cursor: "pointer",
                     fontSize: "0.9rem",
@@ -217,6 +285,7 @@ export default function App() {
             </p>
           )}
         </div>
+        <Footer />
       </div>
     );
   }
@@ -224,13 +293,17 @@ export default function App() {
   // --- HALAMAN ABOUT ME ---
   if (currentHash === "#/about") {
     return (
-      <div style={{ fontFamily: "sans-serif", margin: 0, padding: 0 }}>
+      <div
+        className="page-transition"
+        style={{ fontFamily: "sans-serif", margin: 0, padding: 0 }}
+      >
+        <style>{cssAnimations}</style>
         <Header />
         <div
           style={{
             maxWidth: "900px",
             margin: "0 auto",
-            padding: "2rem 2rem 6rem 2rem",
+            padding: "2rem 2rem 4rem 2rem",
           }}
         >
           <div
@@ -264,7 +337,8 @@ export default function App() {
               }}
             >
               <img
-                src={aboutData.photo_url}
+                className="img-hover"
+                src={getDriveImageUrl(aboutData.photo_url)}
                 alt="Profile"
                 style={{
                   width: "100%",
@@ -336,6 +410,7 @@ export default function App() {
             </p>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -347,77 +422,85 @@ export default function App() {
       return null;
     }
     return (
-      <div style={{ fontFamily: "sans-serif", padding: "2rem 4rem" }}>
-        <button
-          onClick={() => (window.location.hash = "#/")}
-          style={{
-            marginBottom: "2rem",
-            padding: "0.5rem 1rem",
-            cursor: "pointer",
-            background: "transparent",
-            border: "1px solid #ccc",
-          }}
-        >
-          &larr; Kembali ke Home
-        </button>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "2rem",
-          }}
-        >
-          <h1 style={{ color: "#333" }}>{activeProject.title}</h1>
-          {activeProject.link_url && activeProject.link_url !== "#" && (
-            <a
-              href={activeProject.link_url}
-              target="_blank"
-              rel="noreferrer"
+      <div className="page-transition" style={{ fontFamily: "sans-serif" }}>
+        <style>{cssAnimations}</style>
+        <div style={{ padding: "2rem 4rem", minHeight: "80vh" }}>
+          <button
+            className="btn-hover"
+            onClick={() => (window.location.hash = "#/")}
+            style={{
+              marginBottom: "2rem",
+              padding: "0.5rem 1rem",
+              cursor: "pointer",
+              background: "transparent",
+              border: "1px solid #ccc",
+              color: "#333",
+            }}
+          >
+            &larr; Kembali ke Home
+          </button>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "2rem",
+            }}
+          >
+            <h1 style={{ color: "#333" }}>{activeProject.title}</h1>
+            {activeProject.link_url && activeProject.link_url !== "#" && (
+              <a
+                href={activeProject.link_url}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-hover"
+                style={{
+                  padding: "0.8rem 2rem",
+                  backgroundColor: "#333",
+                  color: "#fff",
+                  textDecoration: "none",
+                  borderRadius: "4px",
+                  border: "1px solid #333",
+                }}
+              >
+                Kunjungi Web Project
+              </a>
+            )}
+          </div>
+          {activeProject.pdf_url ? (
+            <div
               style={{
-                padding: "0.8rem 2rem",
-                backgroundColor: "#333",
-                color: "#fff",
-                textDecoration: "none",
-                borderRadius: "4px",
+                width: "100%",
+                height: "80vh",
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+                overflow: "hidden",
               }}
             >
-              Kunjungi Web Project
-            </a>
+              <iframe
+                src={getEmbeddablePdfLink(activeProject.pdf_url)}
+                width="100%"
+                height="100%"
+                allow="autoplay"
+                style={{ border: "none" }}
+                title={`PDF ${activeProject.title}`}
+              ></iframe>
+            </div>
+          ) : (
+            <div
+              style={{
+                padding: "4rem",
+                textAlign: "center",
+                background: "#f9f9f9",
+                borderRadius: "8px",
+                color: "#888",
+              }}
+            >
+              Belum ada file PDF.
+            </div>
           )}
         </div>
-        {activeProject.pdf_url ? (
-          <div
-            style={{
-              width: "100%",
-              height: "80vh",
-              border: "1px solid #ccc",
-              borderRadius: "8px",
-              overflow: "hidden",
-            }}
-          >
-            <iframe
-              src={getEmbeddablePdfLink(activeProject.pdf_url)}
-              width="100%"
-              height="100%"
-              allow="autoplay"
-              style={{ border: "none" }}
-              title={`PDF ${activeProject.title}`}
-            ></iframe>
-          </div>
-        ) : (
-          <div
-            style={{
-              padding: "4rem",
-              textAlign: "center",
-              background: "#f9f9f9",
-              borderRadius: "8px",
-              color: "#888",
-            }}
-          >
-            Belum ada file PDF.
-          </div>
-        )}
+        <Footer />
       </div>
     );
   }
@@ -535,7 +618,6 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
   const [activeTab, setActiveTab] = useState("projects");
   const [isSaving, setIsSaving] = useState(false);
 
-  // Simpan / Edit Project ke DB
   const handleProjectSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -543,32 +625,30 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
       await supabase.from("projects").update(form).eq("id", form.id);
       alert("Project berhasil diperbarui!");
     } else {
-      const { id, ...newProject } = form; // Hapus ID agar digenerate otomatis oleh DB
+      const { id, ...newProject } = form;
       await supabase.from("projects").insert([newProject]);
       alert("Project baru berhasil ditambahkan!");
     }
     setForm(emptyForm);
     setIsEditingProject(false);
     setIsSaving(false);
-    fetchData(); // Refresh data dari server
+    fetchData();
   };
 
-  // Hapus Project dari DB
   const handleDelete = async (id) => {
     if (window.confirm("Yakin ingin menghapus project ini?")) {
       await supabase.from("projects").delete().eq("id", id);
-      fetchData(); // Refresh data dari server
+      fetchData();
     }
   };
 
-  // Update About Me ke DB
   const handleAboutSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
     await supabase.from("about_me").update(aboutForm).eq("id", 1);
     alert("Halaman About Me berhasil diperbarui!");
     setIsSaving(false);
-    fetchData(); // Refresh data
+    fetchData();
   };
 
   return (
@@ -588,7 +668,7 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
           marginBottom: "1rem",
         }}
       >
-        <h2>Dashboard Admin (Terkoneksi Database)</h2>
+        <h2>Dashboard Admin Panel</h2>
         <a
           href="#/"
           style={{
@@ -618,6 +698,7 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
             cursor: "pointer",
             background: activeTab === "projects" ? "#333" : "transparent",
             color: activeTab === "projects" ? "#fff" : "#333",
+            border: "1px solid #333",
           }}
         >
           Kelola Projects
@@ -629,6 +710,7 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
             cursor: "pointer",
             background: activeTab === "about" ? "#333" : "transparent",
             color: activeTab === "about" ? "#fff" : "#333",
+            border: "1px solid #333",
           }}
         >
           Kelola About Me
@@ -671,7 +753,7 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
               />
               <input
                 type="url"
-                placeholder="URL Gambar Cover (JPG/PNG)"
+                placeholder="URL Gambar Cover atau Link Google Drive (Bebas)"
                 value={form.img_url}
                 onChange={(e) => setForm({ ...form, img_url: e.target.value })}
                 required
@@ -772,8 +854,8 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "#eee", textAlign: "left" }}>
-                <th>Judul</th>
-                <th>Aksi</th>
+                <th style={{ padding: "1rem" }}>Judul</th>
+                <th style={{ padding: "1rem" }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -833,7 +915,7 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
             />
           </label>
           <label>
-            URL Foto
+            URL Foto (Bisa pakai Google Drive link)
             <input
               value={aboutForm.photo_url}
               onChange={(e) =>
@@ -856,6 +938,7 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
                 width: "100%",
                 marginTop: "0.5rem",
                 height: "100px",
+                fontFamily: "inherit",
               }}
             />
           </label>
@@ -872,6 +955,7 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
                 width: "100%",
                 marginTop: "0.5rem",
                 height: "100px",
+                fontFamily: "inherit",
               }}
             />
           </label>
@@ -888,6 +972,7 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
                 width: "100%",
                 marginTop: "0.5rem",
                 height: "100px",
+                fontFamily: "inherit",
               }}
             />
           </label>
@@ -910,3 +995,40 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
     </div>
   );
 };
+
+// --- CSS INJECTIONS ---
+const cssAnimations = `
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .page-transition {
+    animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .img-hover {
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+  }
+  .img-hover:hover {
+    transform: scale(1.05) translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15) !important;
+  }
+  .btn-hover {
+    transition: all 0.2s ease;
+  }
+  .btn-hover:hover {
+    background-color: #333 !important;
+    color: #fff !important;
+  }
+  .btn-hover:active {
+    transform: scale(0.95);
+  }
+  .footer-link {
+    color: #666;
+    text-decoration: none;
+    transition: color 0.2s ease;
+    font-weight: 500;
+  }
+  .footer-link:hover {
+    color: #333;
+  }
+`;
