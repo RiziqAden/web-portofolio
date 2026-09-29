@@ -43,22 +43,56 @@ export default function AdminDashboard({
 
   const [activeTab, setActiveTab] = useState("projects");
   const [isSaving, setIsSaving] = useState(false);
+
+  // State untuk menyimpan file foto (About Me & Projects)
   const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedProjectImage, setSelectedProjectImage] = useState(null);
 
   // --- HANDLER PROJECTS ---
   const handleProjectSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
+
+    let finalImgUrl = form.img_url;
+
+    // Jika user memilih file baru untuk cover project
+    if (selectedProjectImage) {
+      const fileExt = selectedProjectImage.name.split(".").pop();
+      const fileName = `project_${Date.now()}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from("images")
+        .upload(fileName, selectedProjectImage);
+
+      if (error) {
+        alert("Gagal upload gambar project. Error: " + error.message);
+        setIsSaving(false);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("images")
+        .getPublicUrl(fileName);
+      finalImgUrl = publicUrlData.publicUrl;
+    }
+
+    const projectDataToSave = { ...form, img_url: finalImgUrl };
+
     if (isEditingProject) {
-      await supabase.from("projects").update(form).eq("id", form.id);
+      await supabase
+        .from("projects")
+        .update(projectDataToSave)
+        .eq("id", projectDataToSave.id);
       alert("Project berhasil diperbarui!");
     } else {
-      const { id, ...newProject } = form;
+      const { id, ...newProject } = projectDataToSave;
       newProject.sort_order = projects.length;
       await supabase.from("projects").insert([newProject]);
       alert("Project baru berhasil ditambahkan!");
     }
+
     setForm(emptyProjForm);
+    setSelectedProjectImage(null); // Reset file yang dipilih
     setIsEditingProject(false);
     setIsSaving(false);
     fetchData();
@@ -109,7 +143,7 @@ export default function AdminDashboard({
       alert("Sertifikat berhasil diperbarui!");
     } else {
       const { id, ...newCert } = certForm;
-      newCert.sort_order = certificates.length; // Tempatkan di urutan paling bawah
+      newCert.sort_order = certificates.length;
       await supabase.from("certificates").insert([newCert]);
       alert("Sertifikat baru berhasil ditambahkan!");
     }
@@ -126,7 +160,6 @@ export default function AdminDashboard({
     }
   };
 
-  // FUNGSI BARU UNTUK MENGGESER URUTAN CERTIFICATES
   const handleMoveCertOrder = async (index, direction) => {
     const newCerts = [...certificates];
     if (direction === "up" && index > 0) {
@@ -161,6 +194,7 @@ export default function AdminDashboard({
     e.preventDefault();
     setIsSaving(true);
     let finalPhotoUrl = aboutForm.photo_url;
+
     if (selectedImage) {
       const fileExt = selectedImage.name.split(".").pop();
       const fileName = `profile_${Date.now()}.${fileExt}`;
@@ -177,6 +211,7 @@ export default function AdminDashboard({
         .getPublicUrl(fileName);
       finalPhotoUrl = publicUrlData.publicUrl;
     }
+
     await supabase
       .from("about_me")
       .update({ ...aboutForm, photo_url: finalPhotoUrl })
@@ -265,6 +300,7 @@ export default function AdminDashboard({
         </button>
       </div>
 
+      {/* --- TAB KELOLA PROJECTS --- */}
       {activeTab === "projects" && (
         <div
           style={{
@@ -303,41 +339,182 @@ export default function AdminDashboard({
               onChange={(e) => setForm({ ...form, role: e.target.value })}
               style={{ padding: "0.8rem" }}
             />
+
+            {/* AREA UPLOAD GAMBAR COVER (Baru) */}
+            <div
+              style={{
+                border: "1px solid #ccc",
+                padding: "1rem",
+                backgroundColor: "#fff",
+                borderRadius: "4px",
+              }}
+            >
+              <label style={{ fontWeight: "bold" }}>
+                Upload Gambar Cover Project:
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setSelectedProjectImage(e.target.files[0])}
+                style={{ display: "block", marginTop: "0.5rem" }}
+                required={!form.img_url} // Wajib diisi jika ini project baru / belum ada gambarnya
+              />
+              {form.img_url && !selectedProjectImage && (
+                <p
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#666",
+                    marginTop: "0.5rem",
+                  }}
+                >
+                  *Gambar cover saat ini sudah terpasang.
+                </p>
+              )}
+            </div>
+
+            <div
+              style={{
+                padding: "1rem",
+                backgroundColor: "#fff",
+                border: "1px solid #ddd",
+                borderRadius: "4px",
+              }}
+            >
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "0.8rem",
+                  fontWeight: "bold",
+                }}
+              >
+                Warna Background Kiri (Area Gambar):
+              </label>
+              <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                {colorOptions.map((color) => (
+                  <label
+                    key={"left-" + color.value}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      value={color.value}
+                      checked={form.bg_color_left === color.value}
+                      onChange={(e) =>
+                        setForm({ ...form, bg_color_left: e.target.value })
+                      }
+                    />
+                    <span
+                      style={{
+                        width: "20px",
+                        height: "20px",
+                        backgroundColor: color.value,
+                        border: "1px solid #ccc",
+                      }}
+                    ></span>
+                    {color.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: "1rem",
+                backgroundColor: "#fff",
+                border: "1px solid #ddd",
+                borderRadius: "4px",
+              }}
+            >
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "0.8rem",
+                  fontWeight: "bold",
+                }}
+              >
+                Warna Background Kanan (Area Teks):
+              </label>
+              <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                {colorOptions.map((color) => (
+                  <label
+                    key={"right-" + color.value}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      value={color.value}
+                      checked={form.bg_color === color.value}
+                      onChange={(e) =>
+                        setForm({ ...form, bg_color: e.target.value })
+                      }
+                    />
+                    <span
+                      style={{
+                        width: "20px",
+                        height: "20px",
+                        backgroundColor: color.value,
+                        border: "1px solid #ccc",
+                      }}
+                    ></span>
+                    {color.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <input
               type="url"
-              placeholder="URL Gambar Cover (Atau Link Postimages.org)"
-              value={form.img_url}
-              onChange={(e) => setForm({ ...form, img_url: e.target.value })}
-              required
-              style={{ padding: "0.8rem" }}
-            />
-            <input
-              type="url"
-              placeholder="Link Google Drive PDF"
+              placeholder="Link Google Drive PDF (Jika Ada)"
               value={form.pdf_url || ""}
               onChange={(e) => setForm({ ...form, pdf_url: e.target.value })}
               style={{ padding: "0.8rem" }}
             />
             <input
               type="url"
-              placeholder="Link Eksternal Project"
+              placeholder="Link Eksternal Project (Jika Ada)"
               value={form.link_url || ""}
               onChange={(e) => setForm({ ...form, link_url: e.target.value })}
               style={{ padding: "0.8rem" }}
             />
-            <button
-              type="submit"
-              disabled={isSaving}
-              style={{
-                padding: "1rem 2rem",
-                backgroundColor: isSaving ? "#888" : "#333",
-                color: "#fff",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              {isSaving ? "Menyimpan..." : "Simpan Project"}
-            </button>
+
+            <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
+              <button
+                type="submit"
+                disabled={isSaving}
+                style={{
+                  padding: "1rem 2rem",
+                  backgroundColor: isSaving ? "#888" : "#333",
+                  color: "#fff",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                {isSaving ? "Menyimpan..." : "Simpan Project"}
+              </button>
+              {isEditingProject && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForm(emptyProjForm);
+                    setSelectedProjectImage(null);
+                    setIsEditingProject(false);
+                  }}
+                  style={{ padding: "1rem 2rem", cursor: "pointer" }}
+                >
+                  Batal
+                </button>
+              )}
+            </div>
           </form>
           <hr style={{ margin: "2rem 0" }} />
 
@@ -395,6 +572,7 @@ export default function AdminDashboard({
                     <button
                       onClick={() => {
                         setForm(proj);
+                        setSelectedProjectImage(null);
                         setIsEditingProject(true);
                       }}
                       style={{ marginRight: "0.5rem", padding: "0.5rem" }}
@@ -420,6 +598,7 @@ export default function AdminDashboard({
         </div>
       )}
 
+      {/* --- TAB KELOLA CERTIFICATES --- */}
       {activeTab === "certificates" && (
         <div
           style={{
@@ -518,8 +697,6 @@ export default function AdminDashboard({
                   }}
                 >
                   <td style={{ padding: "1rem" }}>{cert.title}</td>
-
-                  {/* KOLOM TOMBOL PANAH SERTIFIKAT */}
                   <td style={{ padding: "1rem" }}>
                     <button
                       onClick={() => handleMoveCertOrder(index, "up")}
@@ -552,7 +729,6 @@ export default function AdminDashboard({
                       ↓ Turun
                     </button>
                   </td>
-
                   <td style={{ padding: "1rem" }}>
                     <button
                       onClick={() => {
@@ -582,6 +758,7 @@ export default function AdminDashboard({
         </div>
       )}
 
+      {/* --- TAB KELOLA ABOUT ME --- */}
       {activeTab === "about" && (
         <form
           onSubmit={handleAboutSubmit}
