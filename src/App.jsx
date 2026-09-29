@@ -97,7 +97,6 @@ export default function App() {
       .single();
     if (aboutRes) setAboutData(aboutRes);
 
-    // PERUBAHAN DI SINI: Sertifikat diurutkan berdasarkan sort_order
     const { data: certData } = await supabase
       .from("certificates")
       .select("*")
@@ -118,14 +117,22 @@ export default function App() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
+  // --- HEADER YANG DIPERBARUI MENJADI STICKY ---
   const Header = () => (
     <header
       style={{
         display: "flex",
         justifyContent: "flex-end",
-        padding: "2rem 4rem",
+        padding: "1.5rem 4rem",
         gap: "2rem",
         fontFamily: "sans-serif",
+        position: "sticky", // Ini yang membuatnya menempel saat di-scroll
+        top: 0, // Menempel tepat di atas layar
+        backgroundColor: "rgba(255, 255, 255, 0.90)", // Putih transparan
+        backdropFilter: "blur(10px)", // Efek blur elegan ala Mac/iOS
+        WebkitBackdropFilter: "blur(10px)", // Dukungan untuk browser Safari
+        zIndex: 1000, // Memastikan navigasi selalu berada di atas gambar/teks lain
+        borderBottom: "1px solid rgba(0,0,0,0.05)", // Garis batas tipis di bawah
       }}
     >
       <a
@@ -535,6 +542,7 @@ export default function App() {
     return (
       <div className="page-transition" style={{ fontFamily: "sans-serif" }}>
         <style>{cssAnimations}</style>
+        <Header /> {/* Menambahkan Header ke halaman Detail Project */}
         <div style={{ padding: "2rem 4rem", minHeight: "80vh" }}>
           <button
             className="btn-hover"
