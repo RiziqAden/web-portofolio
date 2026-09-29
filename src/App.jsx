@@ -6,7 +6,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Fungsi Konversi Link Google Drive (PDF & Gambar)
+// Fungsi Konversi Link Google Drive (PDF)
 const getEmbeddablePdfLink = (url) => {
   if (!url) return "";
   if (url.includes("drive.google.com/file/d/")) {
@@ -17,19 +17,21 @@ const getEmbeddablePdfLink = (url) => {
   return url;
 };
 
+// Fungsi Konversi Link Google Drive (Gambar - Sebagai Fallback)
 const getDriveImageUrl = (url) => {
   if (!url) return "";
   if (url.includes("drive.google.com/file/d/")) {
     const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-    // Mengubah link drive biasa menjadi link direct image
     if (match && match[1])
       return `https://drive.google.com/uc?export=view&id=${match[1]}`;
   }
   return url;
 };
 
-// Pilihan Warna Background Kanan (Sudah ditambah warna baru)
+// Pilihan Warna (Sama dengan sebelumnya)
 const colorOptions = [
+  { name: "Putih (Netral)", value: "#ffffff" },
+  { name: "Abu-abu Dasar", value: "#f9f9f9" },
   { name: "Biru Pastel", value: "#e8f4f8" },
   { name: "Ungu Pastel", value: "#f3eef5" },
   { name: "Abu-abu Terang", value: "#eff2f5" },
@@ -77,13 +79,12 @@ export default function App() {
     fetchData();
     const handleHashChange = () => {
       setCurrentHash(window.location.hash);
-      window.scrollTo(0, 0); // Reset scroll saat pindah halaman
+      window.scrollTo(0, 0);
     };
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  // --- KOMPONEN UI GLOBAL ---
   const Header = () => (
     <header
       style={{
@@ -205,10 +206,11 @@ export default function App() {
               key={proj.id}
               style={{ display: "flex", width: "100%", minHeight: "400px" }}
             >
+              {/* Sisi Kiri Sekarang Menggunakan bg_color_left */}
               <div
                 style={{
                   width: "50%",
-                  backgroundColor: "#f9f9f9",
+                  backgroundColor: proj.bg_color_left || "#f9f9f9",
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
@@ -505,7 +507,6 @@ export default function App() {
     );
   }
 
-  // --- LOGIN ADMIN ---
   if (currentHash === "#/admin" && !isLoggedIn) {
     const handleLogin = (e) => {
       e.preventDefault();
@@ -581,7 +582,6 @@ export default function App() {
     );
   }
 
-  // --- DASHBOARD ADMIN ---
   if (currentHash === "#/admin" && isLoggedIn) {
     return (
       <AdminDashboard
@@ -611,6 +611,7 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
     pdf_url: "",
     link_url: "",
     bg_color: colorOptions[0].value,
+    bg_color_left: "#f9f9f9",
   };
   const [form, setForm] = useState(emptyForm);
   const [isEditingProject, setIsEditingProject] = useState(false);
@@ -753,28 +754,22 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
               />
               <input
                 type="url"
-                placeholder="URL Gambar Cover atau Link Google Drive (Bebas)"
+                placeholder="URL Gambar Cover (Atau Link Postimages.org)"
                 value={form.img_url}
                 onChange={(e) => setForm({ ...form, img_url: e.target.value })}
                 required
                 style={{ padding: "0.8rem" }}
               />
-              <input
-                type="url"
-                placeholder="Link Google Drive PDF"
-                value={form.pdf_url || ""}
-                onChange={(e) => setForm({ ...form, pdf_url: e.target.value })}
-                style={{ padding: "0.8rem" }}
-              />
-              <input
-                type="url"
-                placeholder="Link Eksternal Project"
-                value={form.link_url || ""}
-                onChange={(e) => setForm({ ...form, link_url: e.target.value })}
-                style={{ padding: "0.8rem" }}
-              />
 
-              <div>
+              {/* WARNA KIRI (BARU) */}
+              <div
+                style={{
+                  padding: "1rem",
+                  backgroundColor: "#fff",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                }}
+              >
                 <label
                   style={{
                     display: "block",
@@ -782,12 +777,63 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
                     fontWeight: "bold",
                   }}
                 >
-                  Warna Background:
+                  Warna Background Kiri (Area Gambar):
                 </label>
                 <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
                   {colorOptions.map((color) => (
                     <label
-                      key={color.value}
+                      key={"left-" + color.value}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        value={color.value}
+                        checked={form.bg_color_left === color.value}
+                        onChange={(e) =>
+                          setForm({ ...form, bg_color_left: e.target.value })
+                        }
+                      />
+                      <span
+                        style={{
+                          width: "20px",
+                          height: "20px",
+                          backgroundColor: color.value,
+                          border: "1px solid #ccc",
+                        }}
+                      ></span>
+                      {color.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* WARNA KANAN */}
+              <div
+                style={{
+                  padding: "1rem",
+                  backgroundColor: "#fff",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                }}
+              >
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "0.8rem",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Warna Background Kanan (Area Teks):
+                </label>
+                <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                  {colorOptions.map((color) => (
+                    <label
+                      key={"right-" + color.value}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -816,6 +862,21 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
                   ))}
                 </div>
               </div>
+
+              <input
+                type="url"
+                placeholder="Link Google Drive PDF"
+                value={form.pdf_url || ""}
+                onChange={(e) => setForm({ ...form, pdf_url: e.target.value })}
+                style={{ padding: "0.8rem" }}
+              />
+              <input
+                type="url"
+                placeholder="Link Eksternal Project"
+                value={form.link_url || ""}
+                onChange={(e) => setForm({ ...form, link_url: e.target.value })}
+                style={{ padding: "0.8rem" }}
+              />
 
               <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
                 <button
@@ -915,7 +976,8 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
             />
           </label>
           <label>
-            URL Foto (Bisa pakai Google Drive link)
+            URL Foto (Gunakan web Postimages atau taruh foto di folder public VS
+            Code)
             <input
               value={aboutForm.photo_url}
               onChange={(e) =>
