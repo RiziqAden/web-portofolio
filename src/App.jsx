@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import Certificates from "./Certificates";
 import AdminDashboard from "./AdminDashboard";
+import ScrollReveal from "./ScrollReveal"; // Memanggil animasi scroll
 
-// CSS Animasi Global
+// CSS Animasi Global (Sudah ditambahkan animasi Scroll)
 const cssAnimations = `
   @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
@@ -16,6 +17,17 @@ const cssAnimations = `
   .btn-hover:active { transform: scale(0.95); }
   .footer-link { color: #666; text-decoration: none; transition: color 0.2s ease; font-weight: 500; }
   .footer-link:hover { color: #333; }
+  
+  /* CSS UNTUK ANIMASI SCROLL REVEAL */
+  .scroll-reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+  }
+  .scroll-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
 `;
 
 const getEmbeddablePdfLink = (url) => {
@@ -215,7 +227,7 @@ export default function App() {
       </div>
     );
 
-  // --- HALAMAN CERTIFICATES (Memanggil File Baru) ---
+  // --- HALAMAN CERTIFICATES ---
   if (currentHash === "#/certificates") {
     return (
       <Certificates
@@ -263,97 +275,98 @@ export default function App() {
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
           {projects.map((proj) => (
-            <div
-              key={proj.id}
-              style={{ display: "flex", width: "100%", minHeight: "400px" }}
-            >
+            <ScrollReveal key={proj.id}>
               <div
-                style={{
-                  width: "50%",
-                  backgroundColor: proj.bg_color_left || "#f9f9f9",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  padding: "3rem",
-                }}
+                style={{ display: "flex", width: "100%", minHeight: "400px" }}
               >
-                <img
-                  className="img-hover"
-                  src={getDriveImageUrl(proj.img_url)}
-                  alt={proj.title}
+                <div
                   style={{
-                    maxWidth: "80%",
-                    maxHeight: "350px",
-                    objectFit: "contain",
-                    borderRadius: "12px",
-                    boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
-                  }}
-                />
-              </div>
-              <div
-                style={{
-                  width: "50%",
-                  backgroundColor: proj.bg_color,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  padding: "2rem",
-                  textAlign: "center",
-                }}
-              >
-                <h2
-                  style={{
-                    fontSize: "2rem",
-                    color: "#333",
-                    marginBottom: "0.5rem",
+                    width: "50%",
+                    backgroundColor: proj.bg_color_left || "#f9f9f9",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    padding: "3rem",
                   }}
                 >
-                  {proj.title}
-                </h2>
-                <p
-                  style={{
-                    fontSize: "1.1rem",
-                    color: "#666",
-                    marginBottom: proj.role ? "0.5rem" : "2rem",
-                  }}
-                >
-                  {proj.description}
-                </p>
-                {proj.role && (
-                  <p
+                  <img
+                    className="img-hover"
+                    src={getDriveImageUrl(proj.img_url)}
+                    alt={proj.title}
                     style={{
-                      fontSize: "0.9rem",
-                      color: "#888",
-                      fontWeight: "bold",
-                      marginBottom: "2rem",
-                      letterSpacing: "1px",
-                      textTransform: "uppercase",
+                      maxWidth: "80%",
+                      maxHeight: "350px",
+                      objectFit: "contain",
+                      borderRadius: "12px",
+                      boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    width: "50%",
+                    backgroundColor: proj.bg_color,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    padding: "2rem",
+                    textAlign: "center",
+                  }}
+                >
+                  <h2
+                    style={{
+                      fontSize: "2rem",
+                      color: "#333",
+                      marginBottom: "0.5rem",
                     }}
                   >
-                    Role: {proj.role}
+                    {proj.title}
+                  </h2>
+                  <p
+                    style={{
+                      fontSize: "1.1rem",
+                      color: "#666",
+                      marginBottom: proj.role ? "0.5rem" : "2rem",
+                    }}
+                  >
+                    {proj.description}
                   </p>
-                )}
-                <button
-                  className="btn-hover"
-                  onClick={() => {
-                    setActiveProject(proj);
-                    window.location.hash = `#/project/${proj.id}`;
-                  }}
-                  style={{
-                    padding: "0.8rem 2rem",
-                    backgroundColor: "transparent",
-                    color: "#333",
-                    border: "1px solid #333",
-                    cursor: "pointer",
-                    fontSize: "0.9rem",
-                    letterSpacing: "1px",
-                  }}
-                >
-                  READ MORE
-                </button>
+                  {proj.role && (
+                    <p
+                      style={{
+                        fontSize: "0.9rem",
+                        color: "#888",
+                        fontWeight: "bold",
+                        marginBottom: "2rem",
+                        letterSpacing: "1px",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Role: {proj.role}
+                    </p>
+                  )}
+                  <button
+                    className="btn-hover"
+                    onClick={() => {
+                      setActiveProject(proj);
+                      window.location.hash = `#/project/${proj.id}`;
+                    }}
+                    style={{
+                      padding: "0.8rem 2rem",
+                      backgroundColor: "transparent",
+                      color: "#333",
+                      border: "1px solid #333",
+                      cursor: "pointer",
+                      fontSize: "0.9rem",
+                      letterSpacing: "1px",
+                    }}
+                  >
+                    READ MORE
+                  </button>
+                </div>
               </div>
-            </div>
+            </ScrollReveal>
           ))}
           {projects.length === 0 && (
             <p style={{ textAlign: "center", padding: "2rem" }}>
@@ -382,135 +395,146 @@ export default function App() {
             padding: "2rem 2rem 4rem 2rem",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: "4rem",
-              flexWrap: "wrap",
-              gap: "2rem",
-            }}
-          >
-            <div style={{ flex: 1, minWidth: "300px" }}>
-              <h1
-                style={{
-                  fontSize: "3.5rem",
-                  color: "#333",
-                  margin: 0,
-                  lineHeight: "1.2",
-                }}
-              >
-                {aboutData.name}
-              </h1>
-              <p
-                style={{
-                  fontSize: "1.5rem",
-                  color: "#666",
-                  marginTop: "1rem",
-                  fontWeight: "500",
-                }}
-              >
-                {aboutData.role}
-              </p>
-            </div>
+          <ScrollReveal>
             <div
               style={{
-                flex: 1,
                 display: "flex",
-                justifyContent: "flex-end",
-                minWidth: "300px",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "4rem",
+                flexWrap: "wrap",
+                gap: "2rem",
               }}
             >
-              {aboutData.photo_url ? (
-                <img
-                  className="img-hover"
-                  src={aboutData.photo_url}
-                  alt="Profile"
+              <div style={{ flex: 1, minWidth: "300px" }}>
+                <h1
                   style={{
-                    width: "100%",
-                    maxWidth: "350px",
-                    aspectRatio: "1/1",
-                    objectFit: "cover",
-                    borderRadius: "12px",
-                    boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: "350px",
-                    height: "350px",
-                    background: "#eee",
-                    borderRadius: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    fontSize: "3.5rem",
+                    color: "#333",
+                    margin: 0,
+                    lineHeight: "1.2",
                   }}
                 >
-                  Foto belum diatur
-                </div>
-              )}
+                  {aboutData.name}
+                </h1>
+                <p
+                  style={{
+                    fontSize: "1.5rem",
+                    color: "#666",
+                    marginTop: "1rem",
+                    fontWeight: "500",
+                  }}
+                >
+                  {aboutData.role}
+                </p>
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  minWidth: "300px",
+                }}
+              >
+                {aboutData.photo_url ? (
+                  <img
+                    className="img-hover"
+                    src={aboutData.photo_url}
+                    alt="Profile"
+                    style={{
+                      width: "100%",
+                      maxWidth: "350px",
+                      aspectRatio: "1/1",
+                      objectFit: "cover",
+                      borderRadius: "12px",
+                      boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: "350px",
+                      height: "350px",
+                      background: "#eee",
+                      borderRadius: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    Foto belum diatur
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-          <div style={{ marginBottom: "4rem" }}>
-            <p
-              style={{
-                fontSize: "1.25rem",
-                color: "#555",
-                lineHeight: "1.8",
-                whiteSpace: "pre-line",
-              }}
-            >
-              {aboutData.description}
-            </p>
-          </div>
-          <div style={{ marginBottom: "4rem" }}>
-            <h2
-              style={{
-                fontSize: "1.2rem",
-                color: "#333",
-                marginBottom: "1.5rem",
-                borderBottom: "1px solid #ddd",
-                paddingBottom: "0.5rem",
-              }}
-            >
-              SKILLS & COMPETENCIES
-            </h2>
-            <p
-              style={{
-                fontSize: "1.1rem",
-                color: "#666",
-                lineHeight: "1.8",
-                whiteSpace: "pre-line",
-              }}
-            >
-              {aboutData.skills}
-            </p>
-          </div>
-          <div>
-            <h2
-              style={{
-                fontSize: "1.2rem",
-                color: "#333",
-                marginBottom: "1.5rem",
-                borderBottom: "1px solid #ddd",
-                paddingBottom: "0.5rem",
-              }}
-            >
-              CONTACT
-            </h2>
-            <p
-              style={{
-                fontSize: "1.1rem",
-                color: "#666",
-                lineHeight: "1.8",
-                whiteSpace: "pre-line",
-              }}
-            >
-              {aboutData.contact}
-            </p>
-          </div>
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <div style={{ marginBottom: "4rem" }}>
+              <p
+                style={{
+                  fontSize: "1.25rem",
+                  color: "#555",
+                  lineHeight: "1.8",
+                  whiteSpace: "pre-line",
+                }}
+              >
+                {aboutData.description}
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <div style={{ marginBottom: "4rem" }}>
+              <h2
+                style={{
+                  fontSize: "1.2rem",
+                  color: "#333",
+                  marginBottom: "1.5rem",
+                  borderBottom: "1px solid #ddd",
+                  paddingBottom: "0.5rem",
+                }}
+              >
+                SKILLS & COMPETENCIES
+              </h2>
+              <p
+                style={{
+                  fontSize: "1.1rem",
+                  color: "#666",
+                  lineHeight: "1.8",
+                  whiteSpace: "pre-line",
+                }}
+              >
+                {aboutData.skills}
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <div>
+              <h2
+                style={{
+                  fontSize: "1.2rem",
+                  color: "#333",
+                  marginBottom: "1.5rem",
+                  borderBottom: "1px solid #ddd",
+                  paddingBottom: "0.5rem",
+                }}
+              >
+                CONTACT
+              </h2>
+              <p
+                style={{
+                  fontSize: "1.1rem",
+                  color: "#666",
+                  lineHeight: "1.8",
+                  whiteSpace: "pre-line",
+                }}
+              >
+                {aboutData.contact}
+              </p>
+            </div>
+          </ScrollReveal>
         </div>
         <Footer />
       </div>
@@ -607,7 +631,7 @@ export default function App() {
     );
   }
 
-  // --- LOGIN & ADMIN (Memanggil File Baru) ---
+  // --- LOGIN & ADMIN ---
   if (currentHash === "#/admin" && !isLoggedIn) {
     const handleLogin = (e) => {
       e.preventDefault();
