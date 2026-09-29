@@ -495,7 +495,7 @@ export default function App() {
                 style={{
                   fontSize: "1.1rem",
                   color: "#666",
-                  lineHeight: "1.8",
+                  lineHeight: "1.5",
                   whiteSpace: "pre-line",
                 }}
               >
