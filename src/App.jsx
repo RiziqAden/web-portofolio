@@ -6,7 +6,6 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Fungsi Konversi Link Google Drive (PDF/Gambar untuk Project)
 const getEmbeddablePdfLink = (url) => {
   if (!url) return "";
   if (url.includes("drive.google.com/file/d/")) {
@@ -27,7 +26,6 @@ const getDriveImageUrl = (url) => {
   return url;
 };
 
-// Pilihan Warna Background Kiri & Kanan
 const colorOptions = [
   { name: "Putih (Netral)", value: "#ffffff" },
   { name: "Abu-abu Dasar", value: "#f9f9f9" },
@@ -42,12 +40,11 @@ const colorOptions = [
   { name: "Merah Soft", value: "#ffebee" },
 ];
 
-// --- KOMPONEN ANIMASI KETIKAN ---
 const Typewriter = ({ text }) => {
   const [displayedText, setDisplayedText] = useState("");
 
   useEffect(() => {
-    setDisplayedText(""); // Reset saat teks berubah
+    setDisplayedText("");
     let i = 0;
     const timer = setInterval(() => {
       if (i < text.length) {
@@ -56,7 +53,7 @@ const Typewriter = ({ text }) => {
       } else {
         clearInterval(timer);
       }
-    }, 50); // Kecepatan ketikan (50ms)
+    }, 50);
 
     return () => clearInterval(timer);
   }, [text]);
@@ -71,8 +68,10 @@ const Typewriter = ({ text }) => {
 
 export default function App() {
   const [projects, setProjects] = useState([]);
+  // Menambahkan default nickname 'Riziq'
   const [aboutData, setAboutData] = useState({
     name: "",
+    nickname: "Riziq",
     role: "UI UX Designer",
     photo_url: "",
     description: "",
@@ -206,9 +205,8 @@ export default function App() {
 
   // --- HALAMAN HOME ---
   if (currentHash === "" || currentHash === "#/") {
-    // Memotong nama awal untuk sapaan
-    const firstName = aboutData.name.split(" ")[0] || "Riziq";
-    const heroText = `Hii, My name is ${firstName}. I’m a ${aboutData.role || "UI UX Designer"} with a love for simplicity.`;
+    // SEKARANG MENGGUNAKAN NICKNAME
+    const heroText = `Hii, My name is ${aboutData.nickname || "Riziq"}. I’m a ${aboutData.role || "UI UX Designer"} with a love for simplicity.`;
 
     return (
       <div
@@ -218,7 +216,6 @@ export default function App() {
         <style>{cssAnimations}</style>
         <Header />
 
-        {/* BAGIAN TEKS KETIKAN */}
         <div
           style={{
             textAlign: "center",
@@ -688,8 +685,6 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
   const [aboutForm, setAboutForm] = useState(aboutData);
   const [activeTab, setActiveTab] = useState("projects");
   const [isSaving, setIsSaving] = useState(false);
-
-  // State untuk menyimpan file foto yang dipilih
   const [selectedImage, setSelectedImage] = useState(null);
 
   const handleProjectSubmit = async (e) => {
@@ -722,33 +717,26 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
 
     let finalPhotoUrl = aboutForm.photo_url;
 
-    // Jika user memilih file baru untuk diupload
     if (selectedImage) {
       const fileExt = selectedImage.name.split(".").pop();
       const fileName = `profile_${Date.now()}.${fileExt}`;
 
-      // Upload ke Supabase Storage (bucket 'images')
       const { data, error } = await supabase.storage
         .from("images")
         .upload(fileName, selectedImage);
 
       if (error) {
-        alert(
-          'Gagal upload gambar. Pastikan bucket "images" sudah dibuat dan Public. Error: ' +
-            error.message,
-        );
+        alert("Gagal upload gambar. Error: " + error.message);
         setIsSaving(false);
         return;
       }
 
-      // Ambil Public URL-nya
       const { data: publicUrlData } = supabase.storage
         .from("images")
         .getPublicUrl(fileName);
       finalPhotoUrl = publicUrlData.publicUrl;
     }
 
-    // Update database dengan data teks dan URL foto terbaru
     await supabase
       .from("about_me")
       .update({
@@ -758,7 +746,7 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
       .eq("id", 1);
 
     alert("Halaman About Me berhasil diperbarui!");
-    setSelectedImage(null); // Reset pilihan file
+    setSelectedImage(null);
     setIsSaving(false);
     fetchData();
   };
@@ -1074,7 +1062,7 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
           }}
         >
           <label>
-            Nama Anda
+            Nama Lengkap
             <input
               value={aboutForm.name}
               onChange={(e) =>
@@ -1085,11 +1073,23 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
             />
           </label>
 
-          {/* INPUT BARU UNTUK ROLE/POSISI */}
+          {/* INPUT BARU: NAMA PANGGILAN */}
+          <label>
+            Nama Panggilan (Ditampilkan di Home)
+            <input
+              value={aboutForm.nickname || ""}
+              onChange={(e) =>
+                setAboutForm({ ...aboutForm, nickname: e.target.value })
+              }
+              required
+              style={{ padding: "0.8rem", width: "100%", marginTop: "0.5rem" }}
+            />
+          </label>
+
           <label>
             Role / Posisi (Contoh: UI UX Designer)
             <input
-              value={aboutForm.role}
+              value={aboutForm.role || ""}
               onChange={(e) =>
                 setAboutForm({ ...aboutForm, role: e.target.value })
               }
@@ -1098,7 +1098,6 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
             />
           </label>
 
-          {/* INPUT BARU UNTUK UPLOAD FOTO (Bukan Link Lagi) */}
           <div
             style={{
               border: "1px solid #ccc",
@@ -1201,7 +1200,6 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
   );
 };
 
-// --- CSS INJECTIONS ---
 const cssAnimations = `
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(15px); }
