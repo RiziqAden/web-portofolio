@@ -91,7 +91,7 @@ export default function Certificates({
                     letterSpacing: "1px",
                   }}
                 >
-                  Penyelenggara: {cert.organizer}
+                  {cert.organizer}
                 </p>
 
                 {/* Area Konten Sertifikat (PDF/Gambar) */}

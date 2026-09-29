@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { supabase } from "./supabase";
 
 const colorOptions = [
@@ -44,32 +44,33 @@ export default function AdminDashboard({
   const [activeTab, setActiveTab] = useState("projects");
   const [isSaving, setIsSaving] = useState(false);
 
-  // State untuk menyimpan file foto (About Me & Projects)
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedProjectImage, setSelectedProjectImage] = useState(null);
+
+  // === FITUR DRAG AND DROP REFERENSI ===
+  const dragProjItem = useRef(null);
+  const dragProjOverItem = useRef(null);
+
+  const dragCertItem = useRef(null);
+  const dragCertOverItem = useRef(null);
 
   // --- HANDLER PROJECTS ---
   const handleProjectSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-
     let finalImgUrl = form.img_url;
 
-    // Jika user memilih file baru untuk cover project
     if (selectedProjectImage) {
       const fileExt = selectedProjectImage.name.split(".").pop();
       const fileName = `project_${Date.now()}.${fileExt}`;
-
       const { data, error } = await supabase.storage
         .from("images")
         .upload(fileName, selectedProjectImage);
-
       if (error) {
-        alert("Gagal upload gambar project. Error: " + error.message);
+        alert("Gagal upload gambar. Error: " + error.message);
         setIsSaving(false);
         return;
       }
-
       const { data: publicUrlData } = supabase.storage
         .from("images")
         .getPublicUrl(fileName);
@@ -92,7 +93,7 @@ export default function AdminDashboard({
     }
 
     setForm(emptyProjForm);
-    setSelectedProjectImage(null); // Reset file yang dipilih
+    setSelectedProjectImage(null);
     setIsEditingProject(false);
     setIsSaving(false);
     fetchData();
@@ -105,23 +106,23 @@ export default function AdminDashboard({
     }
   };
 
-  const handleMoveOrder = async (index, direction) => {
-    const newProjects = [...projects];
-    if (direction === "up" && index > 0) {
-      [newProjects[index - 1], newProjects[index]] = [
-        newProjects[index],
-        newProjects[index - 1],
-      ];
-    } else if (direction === "down" && index < newProjects.length - 1) {
-      [newProjects[index + 1], newProjects[index]] = [
-        newProjects[index],
-        newProjects[index + 1],
-      ];
-    } else {
+  // Logika Drag & Drop untuk Project
+  const handleDragEndProject = async () => {
+    if (dragProjItem.current === null || dragProjOverItem.current === null)
       return;
-    }
+    if (dragProjItem.current === dragProjOverItem.current) return; // Jika tidak jadi digeser
+
+    // Duplikat array dan tukar posisi
+    const newProjects = [...projects];
+    const draggedItem = newProjects.splice(dragProjItem.current, 1)[0];
+    newProjects.splice(dragProjOverItem.current, 0, draggedItem);
+
+    // Reset referensi drag
+    dragProjItem.current = null;
+    dragProjOverItem.current = null;
 
     setIsSaving(true);
+    // Simpan urutan baru ke database
     await Promise.all(
       newProjects.map((proj, i) =>
         supabase.from("projects").update({ sort_order: i }).eq("id", proj.id),
@@ -160,21 +161,18 @@ export default function AdminDashboard({
     }
   };
 
-  const handleMoveCertOrder = async (index, direction) => {
-    const newCerts = [...certificates];
-    if (direction === "up" && index > 0) {
-      [newCerts[index - 1], newCerts[index]] = [
-        newCerts[index],
-        newCerts[index - 1],
-      ];
-    } else if (direction === "down" && index < newCerts.length - 1) {
-      [newCerts[index + 1], newCerts[index]] = [
-        newCerts[index],
-        newCerts[index + 1],
-      ];
-    } else {
+  // Logika Drag & Drop untuk Sertifikat
+  const handleDragEndCert = async () => {
+    if (dragCertItem.current === null || dragCertOverItem.current === null)
       return;
-    }
+    if (dragCertItem.current === dragCertOverItem.current) return;
+
+    const newCerts = [...certificates];
+    const draggedItem = newCerts.splice(dragCertItem.current, 1)[0];
+    newCerts.splice(dragCertOverItem.current, 0, draggedItem);
+
+    dragCertItem.current = null;
+    dragCertOverItem.current = null;
 
     setIsSaving(true);
     await Promise.all(
@@ -340,7 +338,6 @@ export default function AdminDashboard({
               style={{ padding: "0.8rem" }}
             />
 
-            {/* AREA UPLOAD GAMBAR COVER (Baru) */}
             <div
               style={{
                 border: "1px solid #ccc",
@@ -357,7 +354,7 @@ export default function AdminDashboard({
                 accept="image/*"
                 onChange={(e) => setSelectedProjectImage(e.target.files[0])}
                 style={{ display: "block", marginTop: "0.5rem" }}
-                required={!form.img_url} // Wajib diisi jika ini project baru / belum ada gambarnya
+                required={!form.img_url}
               />
               {form.img_url && !selectedProjectImage && (
                 <p
@@ -518,11 +515,26 @@ export default function AdminDashboard({
           </form>
           <hr style={{ margin: "2rem 0" }} />
 
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          {/* TABEL PROJECTS DENGAN DRAG & DROP */}
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              userSelect: "none",
+            }}
+          >
             <thead>
               <tr style={{ background: "#eee", textAlign: "left" }}>
+                <th
+                  style={{
+                    padding: "1rem",
+                    width: "50px",
+                    textAlign: "center",
+                  }}
+                >
+                  Posisi
+                </th>
                 <th style={{ padding: "1rem" }}>Judul Project</th>
-                <th style={{ padding: "1rem", width: "150px" }}>Ubah Urutan</th>
                 <th style={{ padding: "1rem", width: "150px" }}>Aksi</th>
               </tr>
             </thead>
@@ -530,44 +542,31 @@ export default function AdminDashboard({
               {projects.map((proj, index) => (
                 <tr
                   key={proj.id}
+                  draggable // Mengaktifkan fitur drag bawaan HTML5
+                  onDragStart={(e) => (dragProjItem.current = index)}
+                  onDragEnter={(e) => (dragProjOverItem.current = index)}
+                  onDragEnd={handleDragEndProject}
+                  onDragOver={(e) => e.preventDefault()}
                   style={{
                     borderBottom: "1px solid #ddd",
-                    backgroundColor: isSaving ? "#f0f0f0" : "transparent",
+                    backgroundColor: isSaving ? "#f0f0f0" : "#fff",
+                    cursor: "grab", // Kursor berubah jadi tangan
                   }}
+                  title="Klik dan seret untuk memindahkan urutan"
                 >
-                  <td style={{ padding: "1rem" }}>{proj.title}</td>
-                  <td style={{ padding: "1rem" }}>
-                    <button
-                      onClick={() => handleMoveOrder(index, "up")}
-                      disabled={index === 0 || isSaving}
-                      style={{
-                        marginRight: "0.5rem",
-                        padding: "0.5rem 0.8rem",
-                        cursor: index === 0 ? "not-allowed" : "pointer",
-                        border: "1px solid #ccc",
-                        background: "#fff",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      ↑ Naik
-                    </button>
-                    <button
-                      onClick={() => handleMoveOrder(index, "down")}
-                      disabled={index === projects.length - 1 || isSaving}
-                      style={{
-                        padding: "0.5rem 0.8rem",
-                        cursor:
-                          index === projects.length - 1
-                            ? "not-allowed"
-                            : "pointer",
-                        border: "1px solid #ccc",
-                        background: "#fff",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      ↓ Turun
-                    </button>
+                  {/* Ikon Drag */}
+                  <td
+                    style={{
+                      padding: "1rem",
+                      textAlign: "center",
+                      color: "#aaa",
+                      fontSize: "1.2rem",
+                    }}
+                  >
+                    ☰
                   </td>
+
+                  <td style={{ padding: "1rem" }}>{proj.title}</td>
                   <td style={{ padding: "1rem" }}>
                     <button
                       onClick={() => {
@@ -595,6 +594,17 @@ export default function AdminDashboard({
               ))}
             </tbody>
           </table>
+          <p
+            style={{
+              fontSize: "0.85rem",
+              color: "#888",
+              marginTop: "1rem",
+              textAlign: "center",
+            }}
+          >
+            *Klik dan seret (drag) baris tabel ke atas atau ke bawah untuk
+            mengubah urutan.
+          </p>
         </div>
       )}
 
@@ -679,11 +689,26 @@ export default function AdminDashboard({
           </form>
           <hr style={{ margin: "2rem 0" }} />
 
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          {/* TABEL CERTIFICATES DENGAN DRAG & DROP */}
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              userSelect: "none",
+            }}
+          >
             <thead>
               <tr style={{ background: "#eee", textAlign: "left" }}>
+                <th
+                  style={{
+                    padding: "1rem",
+                    width: "50px",
+                    textAlign: "center",
+                  }}
+                >
+                  Posisi
+                </th>
                 <th style={{ padding: "1rem" }}>Nama Sertifikat</th>
-                <th style={{ padding: "1rem", width: "150px" }}>Ubah Urutan</th>
                 <th style={{ padding: "1rem", width: "150px" }}>Aksi</th>
               </tr>
             </thead>
@@ -691,44 +716,29 @@ export default function AdminDashboard({
               {certificates.map((cert, index) => (
                 <tr
                   key={cert.id}
+                  draggable
+                  onDragStart={(e) => (dragCertItem.current = index)}
+                  onDragEnter={(e) => (dragCertOverItem.current = index)}
+                  onDragEnd={handleDragEndCert}
+                  onDragOver={(e) => e.preventDefault()}
                   style={{
                     borderBottom: "1px solid #ddd",
-                    backgroundColor: isSaving ? "#f0f0f0" : "transparent",
+                    backgroundColor: isSaving ? "#f0f0f0" : "#fff",
+                    cursor: "grab",
                   }}
+                  title="Klik dan seret untuk memindahkan urutan"
                 >
-                  <td style={{ padding: "1rem" }}>{cert.title}</td>
-                  <td style={{ padding: "1rem" }}>
-                    <button
-                      onClick={() => handleMoveCertOrder(index, "up")}
-                      disabled={index === 0 || isSaving}
-                      style={{
-                        marginRight: "0.5rem",
-                        padding: "0.5rem 0.8rem",
-                        cursor: index === 0 ? "not-allowed" : "pointer",
-                        border: "1px solid #ccc",
-                        background: "#fff",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      ↑ Naik
-                    </button>
-                    <button
-                      onClick={() => handleMoveCertOrder(index, "down")}
-                      disabled={index === certificates.length - 1 || isSaving}
-                      style={{
-                        padding: "0.5rem 0.8rem",
-                        cursor:
-                          index === certificates.length - 1
-                            ? "not-allowed"
-                            : "pointer",
-                        border: "1px solid #ccc",
-                        background: "#fff",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      ↓ Turun
-                    </button>
+                  <td
+                    style={{
+                      padding: "1rem",
+                      textAlign: "center",
+                      color: "#aaa",
+                      fontSize: "1.2rem",
+                    }}
+                  >
+                    ☰
                   </td>
+                  <td style={{ padding: "1rem" }}>{cert.title}</td>
                   <td style={{ padding: "1rem" }}>
                     <button
                       onClick={() => {
@@ -755,6 +765,17 @@ export default function AdminDashboard({
               ))}
             </tbody>
           </table>
+          <p
+            style={{
+              fontSize: "0.85rem",
+              color: "#888",
+              marginTop: "1rem",
+              textAlign: "center",
+            }}
+          >
+            *Klik dan seret (drag) baris tabel ke atas atau ke bawah untuk
+            mengubah urutan.
+          </p>
         </div>
       )}
 
