@@ -54,6 +54,7 @@ export default function AdminDashboard({
       alert("Project berhasil diperbarui!");
     } else {
       const { id, ...newProject } = form;
+      newProject.sort_order = projects.length;
       await supabase.from("projects").insert([newProject]);
       alert("Project baru berhasil ditambahkan!");
     }
@@ -70,7 +71,33 @@ export default function AdminDashboard({
     }
   };
 
-  // --- HANDLER CERTIFICATES (BARU) ---
+  const handleMoveOrder = async (index, direction) => {
+    const newProjects = [...projects];
+    if (direction === "up" && index > 0) {
+      [newProjects[index - 1], newProjects[index]] = [
+        newProjects[index],
+        newProjects[index - 1],
+      ];
+    } else if (direction === "down" && index < newProjects.length - 1) {
+      [newProjects[index + 1], newProjects[index]] = [
+        newProjects[index],
+        newProjects[index + 1],
+      ];
+    } else {
+      return;
+    }
+
+    setIsSaving(true);
+    await Promise.all(
+      newProjects.map((proj, i) =>
+        supabase.from("projects").update({ sort_order: i }).eq("id", proj.id),
+      ),
+    );
+    setIsSaving(false);
+    fetchData();
+  };
+
+  // --- HANDLER CERTIFICATES ---
   const handleCertSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -82,6 +109,7 @@ export default function AdminDashboard({
       alert("Sertifikat berhasil diperbarui!");
     } else {
       const { id, ...newCert } = certForm;
+      newCert.sort_order = certificates.length; // Tempatkan di urutan paling bawah
       await supabase.from("certificates").insert([newCert]);
       alert("Sertifikat baru berhasil ditambahkan!");
     }
@@ -96,6 +124,36 @@ export default function AdminDashboard({
       await supabase.from("certificates").delete().eq("id", id);
       fetchData();
     }
+  };
+
+  // FUNGSI BARU UNTUK MENGGESER URUTAN CERTIFICATES
+  const handleMoveCertOrder = async (index, direction) => {
+    const newCerts = [...certificates];
+    if (direction === "up" && index > 0) {
+      [newCerts[index - 1], newCerts[index]] = [
+        newCerts[index],
+        newCerts[index - 1],
+      ];
+    } else if (direction === "down" && index < newCerts.length - 1) {
+      [newCerts[index + 1], newCerts[index]] = [
+        newCerts[index],
+        newCerts[index + 1],
+      ];
+    } else {
+      return;
+    }
+
+    setIsSaving(true);
+    await Promise.all(
+      newCerts.map((cert, i) =>
+        supabase
+          .from("certificates")
+          .update({ sort_order: i })
+          .eq("id", cert.id),
+      ),
+    );
+    setIsSaving(false);
+    fetchData();
   };
 
   // --- HANDLER ABOUT ME ---
@@ -282,24 +340,64 @@ export default function AdminDashboard({
             </button>
           </form>
           <hr style={{ margin: "2rem 0" }} />
+
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "#eee", textAlign: "left" }}>
-                <th style={{ padding: "1rem" }}>Judul</th>
-                <th style={{ padding: "1rem" }}>Aksi</th>
+                <th style={{ padding: "1rem" }}>Judul Project</th>
+                <th style={{ padding: "1rem", width: "150px" }}>Ubah Urutan</th>
+                <th style={{ padding: "1rem", width: "150px" }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {projects.map((proj) => (
-                <tr key={proj.id} style={{ borderBottom: "1px solid #ddd" }}>
+              {projects.map((proj, index) => (
+                <tr
+                  key={proj.id}
+                  style={{
+                    borderBottom: "1px solid #ddd",
+                    backgroundColor: isSaving ? "#f0f0f0" : "transparent",
+                  }}
+                >
                   <td style={{ padding: "1rem" }}>{proj.title}</td>
+                  <td style={{ padding: "1rem" }}>
+                    <button
+                      onClick={() => handleMoveOrder(index, "up")}
+                      disabled={index === 0 || isSaving}
+                      style={{
+                        marginRight: "0.5rem",
+                        padding: "0.5rem 0.8rem",
+                        cursor: index === 0 ? "not-allowed" : "pointer",
+                        border: "1px solid #ccc",
+                        background: "#fff",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      ↑ Naik
+                    </button>
+                    <button
+                      onClick={() => handleMoveOrder(index, "down")}
+                      disabled={index === projects.length - 1 || isSaving}
+                      style={{
+                        padding: "0.5rem 0.8rem",
+                        cursor:
+                          index === projects.length - 1
+                            ? "not-allowed"
+                            : "pointer",
+                        border: "1px solid #ccc",
+                        background: "#fff",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      ↓ Turun
+                    </button>
+                  </td>
                   <td style={{ padding: "1rem" }}>
                     <button
                       onClick={() => {
                         setForm(proj);
                         setIsEditingProject(true);
                       }}
-                      style={{ marginRight: "1rem", padding: "0.5rem" }}
+                      style={{ marginRight: "0.5rem", padding: "0.5rem" }}
                     >
                       Edit
                     </button>
@@ -368,7 +466,6 @@ export default function AdminDashboard({
               required
               style={{ padding: "0.8rem" }}
             />
-
             <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
               <button
                 type="submit"
@@ -401,19 +498,61 @@ export default function AdminDashboard({
               )}
             </div>
           </form>
-
           <hr style={{ margin: "2rem 0" }} />
+
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "#eee", textAlign: "left" }}>
                 <th style={{ padding: "1rem" }}>Nama Sertifikat</th>
-                <th style={{ padding: "1rem" }}>Aksi</th>
+                <th style={{ padding: "1rem", width: "150px" }}>Ubah Urutan</th>
+                <th style={{ padding: "1rem", width: "150px" }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {certificates.map((cert) => (
-                <tr key={cert.id} style={{ borderBottom: "1px solid #ddd" }}>
+              {certificates.map((cert, index) => (
+                <tr
+                  key={cert.id}
+                  style={{
+                    borderBottom: "1px solid #ddd",
+                    backgroundColor: isSaving ? "#f0f0f0" : "transparent",
+                  }}
+                >
                   <td style={{ padding: "1rem" }}>{cert.title}</td>
+
+                  {/* KOLOM TOMBOL PANAH SERTIFIKAT */}
+                  <td style={{ padding: "1rem" }}>
+                    <button
+                      onClick={() => handleMoveCertOrder(index, "up")}
+                      disabled={index === 0 || isSaving}
+                      style={{
+                        marginRight: "0.5rem",
+                        padding: "0.5rem 0.8rem",
+                        cursor: index === 0 ? "not-allowed" : "pointer",
+                        border: "1px solid #ccc",
+                        background: "#fff",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      ↑ Naik
+                    </button>
+                    <button
+                      onClick={() => handleMoveCertOrder(index, "down")}
+                      disabled={index === certificates.length - 1 || isSaving}
+                      style={{
+                        padding: "0.5rem 0.8rem",
+                        cursor:
+                          index === certificates.length - 1
+                            ? "not-allowed"
+                            : "pointer",
+                        border: "1px solid #ccc",
+                        background: "#fff",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      ↓ Turun
+                    </button>
+                  </td>
+
                   <td style={{ padding: "1rem" }}>
                     <button
                       onClick={() => {

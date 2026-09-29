@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import Certificates from "./Certificates";
 import AdminDashboard from "./AdminDashboard";
-import ScrollReveal from "./ScrollReveal"; // Memanggil animasi scroll
+import ScrollReveal from "./ScrollReveal";
 
-// CSS Animasi Global (Sudah ditambahkan animasi Scroll)
 const cssAnimations = `
   @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
@@ -17,17 +16,8 @@ const cssAnimations = `
   .btn-hover:active { transform: scale(0.95); }
   .footer-link { color: #666; text-decoration: none; transition: color 0.2s ease; font-weight: 500; }
   .footer-link:hover { color: #333; }
-  
-  /* CSS UNTUK ANIMASI SCROLL REVEAL */
-  .scroll-reveal {
-    opacity: 0;
-    transform: translateY(40px);
-    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
-  }
-  .scroll-reveal.is-visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  .scroll-reveal { opacity: 0; transform: translateY(40px); transition: opacity 0.8s ease-out, transform 0.8s ease-out; }
+  .scroll-reveal.is-visible { opacity: 1; transform: translateY(0); }
 `;
 
 const getEmbeddablePdfLink = (url) => {
@@ -96,6 +86,7 @@ export default function App() {
     const { data: projData } = await supabase
       .from("projects")
       .select("*")
+      .order("sort_order", { ascending: true })
       .order("id", { ascending: true });
     if (projData) setProjects(projData);
 
@@ -106,9 +97,11 @@ export default function App() {
       .single();
     if (aboutRes) setAboutData(aboutRes);
 
+    // PERUBAHAN DI SINI: Sertifikat diurutkan berdasarkan sort_order
     const { data: certData } = await supabase
       .from("certificates")
       .select("*")
+      .order("sort_order", { ascending: true })
       .order("id", { ascending: true });
     if (certData) setCertificates(certData);
 
@@ -227,8 +220,7 @@ export default function App() {
       </div>
     );
 
-  // --- HALAMAN CERTIFICATES ---
-  if (currentHash === "#/certificates") {
+  if (currentHash === "#/certificates")
     return (
       <Certificates
         Header={Header}
@@ -237,9 +229,7 @@ export default function App() {
         cssAnimations={cssAnimations}
       />
     );
-  }
 
-  // --- HALAMAN HOME ---
   if (currentHash === "" || currentHash === "#/") {
     const heroText = `Hii, My name is ${aboutData.nickname || "Riziq"}. I’m a ${aboutData.role || "UI UX Designer"} with a love for simplicity.`;
     return (
@@ -379,7 +369,6 @@ export default function App() {
     );
   }
 
-  // --- HALAMAN ABOUT ME ---
   if (currentHash === "#/about") {
     return (
       <div
@@ -468,7 +457,6 @@ export default function App() {
               </div>
             </div>
           </ScrollReveal>
-
           <ScrollReveal>
             <div style={{ marginBottom: "4rem" }}>
               <p
@@ -483,7 +471,6 @@ export default function App() {
               </p>
             </div>
           </ScrollReveal>
-
           <ScrollReveal>
             <div style={{ marginBottom: "4rem" }}>
               <h2
@@ -509,7 +496,6 @@ export default function App() {
               </p>
             </div>
           </ScrollReveal>
-
           <ScrollReveal>
             <div>
               <h2
@@ -541,7 +527,6 @@ export default function App() {
     );
   }
 
-  // --- HALAMAN DETAIL PROJECT ---
   if (currentHash.startsWith("#/project/")) {
     if (!activeProject) {
       window.location.hash = "#/";
@@ -631,7 +616,6 @@ export default function App() {
     );
   }
 
-  // --- LOGIN & ADMIN ---
   if (currentHash === "#/admin" && !isLoggedIn) {
     const handleLogin = (e) => {
       e.preventDefault();
