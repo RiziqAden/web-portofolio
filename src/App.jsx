@@ -6,7 +6,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Fungsi Konversi Link Google Drive (PDF)
+// Fungsi Konversi Link Google Drive (PDF/Gambar untuk Project)
 const getEmbeddablePdfLink = (url) => {
   if (!url) return "";
   if (url.includes("drive.google.com/file/d/")) {
@@ -17,7 +17,6 @@ const getEmbeddablePdfLink = (url) => {
   return url;
 };
 
-// Fungsi Konversi Link Google Drive (Gambar - Sebagai Fallback)
 const getDriveImageUrl = (url) => {
   if (!url) return "";
   if (url.includes("drive.google.com/file/d/")) {
@@ -28,7 +27,7 @@ const getDriveImageUrl = (url) => {
   return url;
 };
 
-// Pilihan Warna (Sama dengan sebelumnya)
+// Pilihan Warna Background Kiri & Kanan
 const colorOptions = [
   { name: "Putih (Netral)", value: "#ffffff" },
   { name: "Abu-abu Dasar", value: "#f9f9f9" },
@@ -43,10 +42,38 @@ const colorOptions = [
   { name: "Merah Soft", value: "#ffebee" },
 ];
 
+// --- KOMPONEN ANIMASI KETIKAN ---
+const Typewriter = ({ text }) => {
+  const [displayedText, setDisplayedText] = useState("");
+
+  useEffect(() => {
+    setDisplayedText(""); // Reset saat teks berubah
+    let i = 0;
+    const timer = setInterval(() => {
+      if (i < text.length) {
+        setDisplayedText(text.substring(0, i + 1));
+        i++;
+      } else {
+        clearInterval(timer);
+      }
+    }, 50); // Kecepatan ketikan (50ms)
+
+    return () => clearInterval(timer);
+  }, [text]);
+
+  return (
+    <span>
+      {displayedText}
+      <span className="cursor-blink">|</span>
+    </span>
+  );
+};
+
 export default function App() {
   const [projects, setProjects] = useState([]);
   const [aboutData, setAboutData] = useState({
     name: "",
+    role: "UI UX Designer",
     photo_url: "",
     description: "",
     skills: "",
@@ -179,6 +206,10 @@ export default function App() {
 
   // --- HALAMAN HOME ---
   if (currentHash === "" || currentHash === "#/") {
+    // Memotong nama awal untuk sapaan
+    const firstName = aboutData.name.split(" ")[0] || "Riziq";
+    const heroText = `Hii, My name is ${firstName}. I’m a ${aboutData.role || "UI UX Designer"} with a love for simplicity.`;
+
     return (
       <div
         className="page-transition"
@@ -186,17 +217,30 @@ export default function App() {
       >
         <style>{cssAnimations}</style>
         <Header />
+
+        {/* BAGIAN TEKS KETIKAN */}
         <div
           style={{
             textAlign: "center",
             padding: "4rem 2rem",
             maxWidth: "800px",
             margin: "0 auto",
+            minHeight: "120px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          <p style={{ fontSize: "1.2rem", color: "#555", lineHeight: "1.6" }}>
-            Hii, My name is Riziq. I’m a UI UX Designer with a love for
-            simplicity.
+          <p
+            style={{
+              fontSize: "1.5rem",
+              color: "#444",
+              lineHeight: "1.6",
+              fontWeight: "500",
+              margin: 0,
+            }}
+          >
+            <Typewriter text={heroText} />
           </p>
         </div>
 
@@ -206,7 +250,6 @@ export default function App() {
               key={proj.id}
               style={{ display: "flex", width: "100%", minHeight: "400px" }}
             >
-              {/* Sisi Kiri Sekarang Menggunakan bg_color_left */}
               <div
                 style={{
                   width: "50%",
@@ -329,6 +372,16 @@ export default function App() {
               >
                 {aboutData.name}
               </h1>
+              <p
+                style={{
+                  fontSize: "1.5rem",
+                  color: "#666",
+                  marginTop: "1rem",
+                  fontWeight: "500",
+                }}
+              >
+                {aboutData.role}
+              </p>
             </div>
             <div
               style={{
@@ -338,19 +391,35 @@ export default function App() {
                 minWidth: "300px",
               }}
             >
-              <img
-                className="img-hover"
-                src={getDriveImageUrl(aboutData.photo_url)}
-                alt="Profile"
-                style={{
-                  width: "100%",
-                  maxWidth: "350px",
-                  aspectRatio: "1/1",
-                  objectFit: "cover",
-                  borderRadius: "12px",
-                  boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
-                }}
-              />
+              {aboutData.photo_url ? (
+                <img
+                  className="img-hover"
+                  src={aboutData.photo_url}
+                  alt="Profile"
+                  style={{
+                    width: "100%",
+                    maxWidth: "350px",
+                    aspectRatio: "1/1",
+                    objectFit: "cover",
+                    borderRadius: "12px",
+                    boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "350px",
+                    height: "350px",
+                    background: "#eee",
+                    borderRadius: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  Foto belum diatur
+                </div>
+              )}
             </div>
           </div>
           <div style={{ marginBottom: "4rem" }}>
@@ -601,7 +670,7 @@ export default function App() {
   );
 }
 
-// KOMPONEN ADMIN DATABASE
+// --- KOMPONEN ADMIN DATABASE ---
 const AdminDashboard = ({ projects, fetchData, aboutData }) => {
   const emptyForm = {
     id: null,
@@ -615,9 +684,13 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
   };
   const [form, setForm] = useState(emptyForm);
   const [isEditingProject, setIsEditingProject] = useState(false);
+
   const [aboutForm, setAboutForm] = useState(aboutData);
   const [activeTab, setActiveTab] = useState("projects");
   const [isSaving, setIsSaving] = useState(false);
+
+  // State untuk menyimpan file foto yang dipilih
+  const [selectedImage, setSelectedImage] = useState(null);
 
   const handleProjectSubmit = async (e) => {
     e.preventDefault();
@@ -646,8 +719,46 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
   const handleAboutSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    await supabase.from("about_me").update(aboutForm).eq("id", 1);
+
+    let finalPhotoUrl = aboutForm.photo_url;
+
+    // Jika user memilih file baru untuk diupload
+    if (selectedImage) {
+      const fileExt = selectedImage.name.split(".").pop();
+      const fileName = `profile_${Date.now()}.${fileExt}`;
+
+      // Upload ke Supabase Storage (bucket 'images')
+      const { data, error } = await supabase.storage
+        .from("images")
+        .upload(fileName, selectedImage);
+
+      if (error) {
+        alert(
+          'Gagal upload gambar. Pastikan bucket "images" sudah dibuat dan Public. Error: ' +
+            error.message,
+        );
+        setIsSaving(false);
+        return;
+      }
+
+      // Ambil Public URL-nya
+      const { data: publicUrlData } = supabase.storage
+        .from("images")
+        .getPublicUrl(fileName);
+      finalPhotoUrl = publicUrlData.publicUrl;
+    }
+
+    // Update database dengan data teks dan URL foto terbaru
+    await supabase
+      .from("about_me")
+      .update({
+        ...aboutForm,
+        photo_url: finalPhotoUrl,
+      })
+      .eq("id", 1);
+
     alert("Halaman About Me berhasil diperbarui!");
+    setSelectedImage(null); // Reset pilihan file
     setIsSaving(false);
     fetchData();
   };
@@ -761,7 +872,6 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
                 style={{ padding: "0.8rem" }}
               />
 
-              {/* WARNA KIRI (BARU) */}
               <div
                 style={{
                   padding: "1rem",
@@ -812,7 +922,6 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
                 </div>
               </div>
 
-              {/* WARNA KANAN */}
               <div
                 style={{
                   padding: "1rem",
@@ -965,7 +1074,7 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
           }}
         >
           <label>
-            Nama
+            Nama Anda
             <input
               value={aboutForm.name}
               onChange={(e) =>
@@ -975,18 +1084,51 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
               style={{ padding: "0.8rem", width: "100%", marginTop: "0.5rem" }}
             />
           </label>
+
+          {/* INPUT BARU UNTUK ROLE/POSISI */}
           <label>
-            URL Foto (Gunakan web Postimages atau taruh foto di folder public VS
-            Code)
+            Role / Posisi (Contoh: UI UX Designer)
             <input
-              value={aboutForm.photo_url}
+              value={aboutForm.role}
               onChange={(e) =>
-                setAboutForm({ ...aboutForm, photo_url: e.target.value })
+                setAboutForm({ ...aboutForm, role: e.target.value })
               }
               required
               style={{ padding: "0.8rem", width: "100%", marginTop: "0.5rem" }}
             />
           </label>
+
+          {/* INPUT BARU UNTUK UPLOAD FOTO (Bukan Link Lagi) */}
+          <div
+            style={{
+              border: "1px solid #ccc",
+              padding: "1rem",
+              backgroundColor: "#fff",
+              borderRadius: "4px",
+            }}
+          >
+            <label style={{ fontWeight: "bold" }}>
+              Upload Foto Profil Baru (Kosongkan jika tidak ingin mengubah):
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setSelectedImage(e.target.files[0])}
+              style={{ display: "block", marginTop: "0.5rem" }}
+            />
+            {aboutForm.photo_url && !selectedImage && (
+              <p
+                style={{
+                  fontSize: "0.85rem",
+                  color: "#666",
+                  marginTop: "0.5rem",
+                }}
+              >
+                *Foto saat ini sudah terpasang.
+              </p>
+            )}
+          </div>
+
           <label>
             Deskripsi
             <textarea
@@ -1038,6 +1180,7 @@ const AdminDashboard = ({ projects, fetchData, aboutData }) => {
               }}
             />
           </label>
+
           <button
             type="submit"
             disabled={isSaving}
@@ -1063,6 +1206,14 @@ const cssAnimations = `
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(15px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  .cursor-blink {
+    animation: blink 1s step-end infinite;
+    font-weight: 300;
   }
   .page-transition {
     animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
