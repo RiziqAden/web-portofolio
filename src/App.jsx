@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 
-// KONFIGURASI SUPABASE (Ganti dengan URL dan KEY Anda sendiri!)
-const supabaseUrl = "ISI_DENGAN_URL_SUPABASE";
-const supabaseKey = "ISI_DENGAN_ANON_KEY_SUPABASE";
+// KONFIGURASI SUPABASE (Memanggil dari file .env)
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const getEmbeddablePdfLink = (url) => {
