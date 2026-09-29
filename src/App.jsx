@@ -1,10 +1,22 @@
 import React, { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "./supabase";
+import Certificates from "./Certificates";
+import AdminDashboard from "./AdminDashboard";
 
-// KONFIGURASI SUPABASE (.env)
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+// CSS Animasi Global
+const cssAnimations = `
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+  .cursor-blink { animation: blink 1s step-end infinite; font-weight: 300; }
+  .page-transition { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .img-hover { transition: transform 0.4s ease, box-shadow 0.4s ease; }
+  .img-hover:hover { transform: scale(1.05) translateY(-5px); box-shadow: 0 15px 35px rgba(0,0,0,0.15) !important; }
+  .btn-hover { transition: all 0.2s ease; }
+  .btn-hover:hover { background-color: #333 !important; color: #fff !important; }
+  .btn-hover:active { transform: scale(0.95); }
+  .footer-link { color: #666; text-decoration: none; transition: color 0.2s ease; font-weight: 500; }
+  .footer-link:hover { color: #333; }
+`;
 
 const getEmbeddablePdfLink = (url) => {
   if (!url) return "";
@@ -26,23 +38,8 @@ const getDriveImageUrl = (url) => {
   return url;
 };
 
-const colorOptions = [
-  { name: "Putih (Netral)", value: "#ffffff" },
-  { name: "Abu-abu Dasar", value: "#f9f9f9" },
-  { name: "Biru Pastel", value: "#e8f4f8" },
-  { name: "Ungu Pastel", value: "#f3eef5" },
-  { name: "Abu-abu Terang", value: "#eff2f5" },
-  { name: "Krem (Charitize)", value: "#faebe1" },
-  { name: "Hijau Pastel", value: "#eaf4e5" },
-  { name: "Kuning Pastel", value: "#fff8e1" },
-  { name: "Biru Cerah", value: "#e3f2fd" },
-  { name: "Biru Telur Asin", value: "#e0f2f1" },
-  { name: "Merah Soft", value: "#ffebee" },
-];
-
 const Typewriter = ({ text }) => {
   const [displayedText, setDisplayedText] = useState("");
-
   useEffect(() => {
     setDisplayedText("");
     let i = 0;
@@ -54,10 +51,8 @@ const Typewriter = ({ text }) => {
         clearInterval(timer);
       }
     }, 50);
-
     return () => clearInterval(timer);
   }, [text]);
-
   return (
     <span>
       {displayedText}
@@ -68,7 +63,7 @@ const Typewriter = ({ text }) => {
 
 export default function App() {
   const [projects, setProjects] = useState([]);
-  // Menambahkan default nickname 'Riziq'
+  const [certificates, setCertificates] = useState([]);
   const [aboutData, setAboutData] = useState({
     name: "",
     nickname: "Riziq",
@@ -78,6 +73,7 @@ export default function App() {
     skills: "",
     contact: "",
   });
+
   const [currentHash, setCurrentHash] = useState(window.location.hash);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeProject, setActiveProject] = useState(null);
@@ -97,6 +93,12 @@ export default function App() {
       .eq("id", 1)
       .single();
     if (aboutRes) setAboutData(aboutRes);
+
+    const { data: certData } = await supabase
+      .from("certificates")
+      .select("*")
+      .order("id", { ascending: true });
+    if (certData) setCertificates(certData);
 
     setLoading(false);
   };
@@ -141,6 +143,16 @@ export default function App() {
         }}
       >
         About Me
+      </a>
+      <a
+        href="#/certificates"
+        style={{
+          textDecoration: "none",
+          color: currentHash === "#/certificates" ? "#333" : "#888",
+          fontWeight: currentHash === "#/certificates" ? "bold" : "normal",
+        }}
+      >
+        Certificates
       </a>
     </header>
   );
@@ -203,11 +215,21 @@ export default function App() {
       </div>
     );
 
+  // --- HALAMAN CERTIFICATES (Memanggil File Baru) ---
+  if (currentHash === "#/certificates") {
+    return (
+      <Certificates
+        Header={Header}
+        Footer={Footer}
+        certificates={certificates}
+        cssAnimations={cssAnimations}
+      />
+    );
+  }
+
   // --- HALAMAN HOME ---
   if (currentHash === "" || currentHash === "#/") {
-    // SEKARANG MENGGUNAKAN NICKNAME
     const heroText = `Hii, My name is ${aboutData.nickname || "Riziq"}. I’m a ${aboutData.role || "UI UX Designer"} with a love for simplicity.`;
-
     return (
       <div
         className="page-transition"
@@ -215,7 +237,6 @@ export default function App() {
       >
         <style>{cssAnimations}</style>
         <Header />
-
         <div
           style={{
             textAlign: "center",
@@ -240,7 +261,6 @@ export default function App() {
             <Typewriter text={heroText} />
           </p>
         </div>
-
         <div style={{ display: "flex", flexDirection: "column" }}>
           {projects.map((proj) => (
             <div
@@ -295,11 +315,25 @@ export default function App() {
                   style={{
                     fontSize: "1.1rem",
                     color: "#666",
-                    marginBottom: "2rem",
+                    marginBottom: proj.role ? "0.5rem" : "2rem",
                   }}
                 >
                   {proj.description}
                 </p>
+                {proj.role && (
+                  <p
+                    style={{
+                      fontSize: "0.9rem",
+                      color: "#888",
+                      fontWeight: "bold",
+                      marginBottom: "2rem",
+                      letterSpacing: "1px",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Role: {proj.role}
+                  </p>
+                )}
                 <button
                   className="btn-hover"
                   onClick={() => {
@@ -573,6 +607,7 @@ export default function App() {
     );
   }
 
+  // --- LOGIN & ADMIN (Memanggil File Baru) ---
   if (currentHash === "#/admin" && !isLoggedIn) {
     const handleLogin = (e) => {
       e.preventDefault();
@@ -652,6 +687,7 @@ export default function App() {
     return (
       <AdminDashboard
         projects={projects}
+        certificates={certificates}
         fetchData={fetchData}
         aboutData={aboutData}
       />
@@ -666,580 +702,3 @@ export default function App() {
     </div>
   );
 }
-
-// --- KOMPONEN ADMIN DATABASE ---
-const AdminDashboard = ({ projects, fetchData, aboutData }) => {
-  const emptyForm = {
-    id: null,
-    title: "",
-    description: "",
-    img_url: "",
-    pdf_url: "",
-    link_url: "",
-    bg_color: colorOptions[0].value,
-    bg_color_left: "#f9f9f9",
-  };
-  const [form, setForm] = useState(emptyForm);
-  const [isEditingProject, setIsEditingProject] = useState(false);
-
-  const [aboutForm, setAboutForm] = useState(aboutData);
-  const [activeTab, setActiveTab] = useState("projects");
-  const [isSaving, setIsSaving] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
-
-  const handleProjectSubmit = async (e) => {
-    e.preventDefault();
-    setIsSaving(true);
-    if (isEditingProject) {
-      await supabase.from("projects").update(form).eq("id", form.id);
-      alert("Project berhasil diperbarui!");
-    } else {
-      const { id, ...newProject } = form;
-      await supabase.from("projects").insert([newProject]);
-      alert("Project baru berhasil ditambahkan!");
-    }
-    setForm(emptyForm);
-    setIsEditingProject(false);
-    setIsSaving(false);
-    fetchData();
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm("Yakin ingin menghapus project ini?")) {
-      await supabase.from("projects").delete().eq("id", id);
-      fetchData();
-    }
-  };
-
-  const handleAboutSubmit = async (e) => {
-    e.preventDefault();
-    setIsSaving(true);
-
-    let finalPhotoUrl = aboutForm.photo_url;
-
-    if (selectedImage) {
-      const fileExt = selectedImage.name.split(".").pop();
-      const fileName = `profile_${Date.now()}.${fileExt}`;
-
-      const { data, error } = await supabase.storage
-        .from("images")
-        .upload(fileName, selectedImage);
-
-      if (error) {
-        alert("Gagal upload gambar. Error: " + error.message);
-        setIsSaving(false);
-        return;
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from("images")
-        .getPublicUrl(fileName);
-      finalPhotoUrl = publicUrlData.publicUrl;
-    }
-
-    await supabase
-      .from("about_me")
-      .update({
-        ...aboutForm,
-        photo_url: finalPhotoUrl,
-      })
-      .eq("id", 1);
-
-    alert("Halaman About Me berhasil diperbarui!");
-    setSelectedImage(null);
-    setIsSaving(false);
-    fetchData();
-  };
-
-  return (
-    <div
-      style={{
-        fontFamily: "sans-serif",
-        padding: "2rem 4rem",
-        maxWidth: "1000px",
-        margin: "0 auto",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1rem",
-        }}
-      >
-        <h2>Dashboard Admin Panel</h2>
-        <a
-          href="#/"
-          style={{
-            textDecoration: "none",
-            color: "#333",
-            border: "1px solid #333",
-            padding: "0.5rem 1rem",
-          }}
-        >
-          &larr; Lihat Website
-        </a>
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          gap: "1rem",
-          marginBottom: "2rem",
-          borderBottom: "2px solid #eee",
-          paddingBottom: "1rem",
-        }}
-      >
-        <button
-          onClick={() => setActiveTab("projects")}
-          style={{
-            padding: "0.5rem 1rem",
-            cursor: "pointer",
-            background: activeTab === "projects" ? "#333" : "transparent",
-            color: activeTab === "projects" ? "#fff" : "#333",
-            border: "1px solid #333",
-          }}
-        >
-          Kelola Projects
-        </button>
-        <button
-          onClick={() => setActiveTab("about")}
-          style={{
-            padding: "0.5rem 1rem",
-            cursor: "pointer",
-            background: activeTab === "about" ? "#333" : "transparent",
-            color: activeTab === "about" ? "#fff" : "#333",
-            border: "1px solid #333",
-          }}
-        >
-          Kelola About Me
-        </button>
-      </div>
-
-      {activeTab === "projects" && (
-        <>
-          <div
-            style={{
-              background: "#f9f9f9",
-              padding: "2rem",
-              borderRadius: "8px",
-              marginBottom: "3rem",
-              border: "1px solid #eee",
-            }}
-          >
-            <h3>{isEditingProject ? "Edit Project" : "Tambah Project Baru"}</h3>
-            <form
-              onSubmit={handleProjectSubmit}
-              style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
-            >
-              <input
-                type="text"
-                placeholder="Judul Project"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                required
-                style={{ padding: "0.8rem" }}
-              />
-              <input
-                type="text"
-                placeholder="Deskripsi Singkat"
-                value={form.description}
-                onChange={(e) =>
-                  setForm({ ...form, description: e.target.value })
-                }
-                required
-                style={{ padding: "0.8rem" }}
-              />
-              <input
-                type="url"
-                placeholder="URL Gambar Cover (Atau Link Postimages.org)"
-                value={form.img_url}
-                onChange={(e) => setForm({ ...form, img_url: e.target.value })}
-                required
-                style={{ padding: "0.8rem" }}
-              />
-
-              <div
-                style={{
-                  padding: "1rem",
-                  backgroundColor: "#fff",
-                  border: "1px solid #ddd",
-                  borderRadius: "4px",
-                }}
-              >
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "0.8rem",
-                    fontWeight: "bold",
-                  }}
-                >
-                  Warna Background Kiri (Area Gambar):
-                </label>
-                <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-                  {colorOptions.map((color) => (
-                    <label
-                      key={"left-" + color.value}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        value={color.value}
-                        checked={form.bg_color_left === color.value}
-                        onChange={(e) =>
-                          setForm({ ...form, bg_color_left: e.target.value })
-                        }
-                      />
-                      <span
-                        style={{
-                          width: "20px",
-                          height: "20px",
-                          backgroundColor: color.value,
-                          border: "1px solid #ccc",
-                        }}
-                      ></span>
-                      {color.name}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  padding: "1rem",
-                  backgroundColor: "#fff",
-                  border: "1px solid #ddd",
-                  borderRadius: "4px",
-                }}
-              >
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: "0.8rem",
-                    fontWeight: "bold",
-                  }}
-                >
-                  Warna Background Kanan (Area Teks):
-                </label>
-                <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-                  {colorOptions.map((color) => (
-                    <label
-                      key={"right-" + color.value}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        value={color.value}
-                        checked={form.bg_color === color.value}
-                        onChange={(e) =>
-                          setForm({ ...form, bg_color: e.target.value })
-                        }
-                      />
-                      <span
-                        style={{
-                          width: "20px",
-                          height: "20px",
-                          backgroundColor: color.value,
-                          border: "1px solid #ccc",
-                        }}
-                      ></span>
-                      {color.name}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <input
-                type="url"
-                placeholder="Link Google Drive PDF"
-                value={form.pdf_url || ""}
-                onChange={(e) => setForm({ ...form, pdf_url: e.target.value })}
-                style={{ padding: "0.8rem" }}
-              />
-              <input
-                type="url"
-                placeholder="Link Eksternal Project"
-                value={form.link_url || ""}
-                onChange={(e) => setForm({ ...form, link_url: e.target.value })}
-                style={{ padding: "0.8rem" }}
-              />
-
-              <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  style={{
-                    padding: "1rem 2rem",
-                    backgroundColor: isSaving ? "#888" : "#333",
-                    color: "#fff",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  {isSaving
-                    ? "Menyimpan..."
-                    : isEditingProject
-                      ? "Simpan Perubahan"
-                      : "Upload Project"}
-                </button>
-                {isEditingProject && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setForm(emptyForm);
-                      setIsEditingProject(false);
-                    }}
-                    style={{ padding: "1rem 2rem", cursor: "pointer" }}
-                  >
-                    Batal
-                  </button>
-                )}
-              </div>
-            </form>
-          </div>
-
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: "#eee", textAlign: "left" }}>
-                <th style={{ padding: "1rem" }}>Judul</th>
-                <th style={{ padding: "1rem" }}>Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.map((proj) => (
-                <tr key={proj.id} style={{ borderBottom: "1px solid #ddd" }}>
-                  <td style={{ padding: "1rem" }}>{proj.title}</td>
-                  <td style={{ padding: "1rem" }}>
-                    <button
-                      onClick={() => {
-                        setForm(proj);
-                        setIsEditingProject(true);
-                        window.scrollTo(0, 0);
-                      }}
-                      style={{ marginRight: "1rem", padding: "0.5rem" }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(proj.id)}
-                      style={{
-                        padding: "0.5rem",
-                        backgroundColor: "#ff4d4d",
-                        color: "white",
-                        border: "none",
-                      }}
-                    >
-                      Hapus
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
-
-      {activeTab === "about" && (
-        <form
-          onSubmit={handleAboutSubmit}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "1.5rem",
-            background: "#f9f9f9",
-            padding: "2rem",
-          }}
-        >
-          <label>
-            Nama Lengkap
-            <input
-              value={aboutForm.name}
-              onChange={(e) =>
-                setAboutForm({ ...aboutForm, name: e.target.value })
-              }
-              required
-              style={{ padding: "0.8rem", width: "100%", marginTop: "0.5rem" }}
-            />
-          </label>
-
-          {/* INPUT BARU: NAMA PANGGILAN */}
-          <label>
-            Nama Panggilan (Ditampilkan di Home)
-            <input
-              value={aboutForm.nickname || ""}
-              onChange={(e) =>
-                setAboutForm({ ...aboutForm, nickname: e.target.value })
-              }
-              required
-              style={{ padding: "0.8rem", width: "100%", marginTop: "0.5rem" }}
-            />
-          </label>
-
-          <label>
-            Role / Posisi (Contoh: UI UX Designer)
-            <input
-              value={aboutForm.role || ""}
-              onChange={(e) =>
-                setAboutForm({ ...aboutForm, role: e.target.value })
-              }
-              required
-              style={{ padding: "0.8rem", width: "100%", marginTop: "0.5rem" }}
-            />
-          </label>
-
-          <div
-            style={{
-              border: "1px solid #ccc",
-              padding: "1rem",
-              backgroundColor: "#fff",
-              borderRadius: "4px",
-            }}
-          >
-            <label style={{ fontWeight: "bold" }}>
-              Upload Foto Profil Baru (Kosongkan jika tidak ingin mengubah):
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setSelectedImage(e.target.files[0])}
-              style={{ display: "block", marginTop: "0.5rem" }}
-            />
-            {aboutForm.photo_url && !selectedImage && (
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "#666",
-                  marginTop: "0.5rem",
-                }}
-              >
-                *Foto saat ini sudah terpasang.
-              </p>
-            )}
-          </div>
-
-          <label>
-            Deskripsi
-            <textarea
-              value={aboutForm.description}
-              onChange={(e) =>
-                setAboutForm({ ...aboutForm, description: e.target.value })
-              }
-              required
-              style={{
-                padding: "0.8rem",
-                width: "100%",
-                marginTop: "0.5rem",
-                height: "100px",
-                fontFamily: "inherit",
-              }}
-            />
-          </label>
-          <label>
-            Skills
-            <textarea
-              value={aboutForm.skills}
-              onChange={(e) =>
-                setAboutForm({ ...aboutForm, skills: e.target.value })
-              }
-              required
-              style={{
-                padding: "0.8rem",
-                width: "100%",
-                marginTop: "0.5rem",
-                height: "100px",
-                fontFamily: "inherit",
-              }}
-            />
-          </label>
-          <label>
-            Contact
-            <textarea
-              value={aboutForm.contact}
-              onChange={(e) =>
-                setAboutForm({ ...aboutForm, contact: e.target.value })
-              }
-              required
-              style={{
-                padding: "0.8rem",
-                width: "100%",
-                marginTop: "0.5rem",
-                height: "100px",
-                fontFamily: "inherit",
-              }}
-            />
-          </label>
-
-          <button
-            type="submit"
-            disabled={isSaving}
-            style={{
-              padding: "1rem",
-              backgroundColor: isSaving ? "#888" : "#333",
-              color: "#fff",
-              border: "none",
-              cursor: "pointer",
-              width: "200px",
-            }}
-          >
-            {isSaving ? "Menyimpan..." : "Simpan Halaman About"}
-          </button>
-        </form>
-      )}
-    </div>
-  );
-};
-
-const cssAnimations = `
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(15px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
-  }
-  .cursor-blink {
-    animation: blink 1s step-end infinite;
-    font-weight: 300;
-  }
-  .page-transition {
-    animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  }
-  .img-hover {
-    transition: transform 0.4s ease, box-shadow 0.4s ease;
-  }
-  .img-hover:hover {
-    transform: scale(1.05) translateY(-5px);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.15) !important;
-  }
-  .btn-hover {
-    transition: all 0.2s ease;
-  }
-  .btn-hover:hover {
-    background-color: #333 !important;
-    color: #fff !important;
-  }
-  .btn-hover:active {
-    transform: scale(0.95);
-  }
-  .footer-link {
-    color: #666;
-    text-decoration: none;
-    transition: color 0.2s ease;
-    font-weight: 500;
-  }
-  .footer-link:hover {
-    color: #333;
-  }
-`;
